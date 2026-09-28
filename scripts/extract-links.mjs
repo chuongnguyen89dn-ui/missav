@@ -24,12 +24,13 @@ function metadata(html,base){
  const image=tags['og:image']||null;
  return {title,description:tags['og:description']||tags.description||null,image:image?new URL(image,base).href:null,jsonLd:ld};
 }
+const is1080=u=>/(?:^|[\/_.-])1080p?(?:[\/_.-]|$)/i.test(new URL(u).pathname)||/(?:^|[?&])(?:quality|resolution|res|height)=1080(?:p|&|$)/i.test(new URL(u).search);
 function extract(html,page){
- const all=urls(html,page), playlists=all.filter(u=>/\.m3u8(?:[?#]|$)/i.test(u)), media=all.filter(u=>/\.(?:mp4|mpd)(?:[?#]|$)/i.test(u));
+ const all=urls(html,page), playlists=all.filter(u=>/\.m3u8(?:[?#]|$)/i.test(u)&&is1080(u)), media=all.filter(u=>/\.(?:mp4|mpd)(?:[?#]|$)/i.test(u)&&is1080(u));
  const ids=unique([...html.matchAll(/(?:surrit(?:\.mrstcdn\.store|\.com)?\/|["'])([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?:\/|["'])/gi)].map(m=>m[1].toLowerCase()));
  const code=page.match(/\/(?:[a-z]{2}\/)?([a-z]{2,12}[-_]?\d{2,8})(?:[/?#]|$)/i)?.[1]?.toUpperCase()||null;
  const mirrorCandidates=unique(playlists.filter(u=>new URL(u).hostname==='surrit.com').map(u=>u.replace('https://surrit.com/','https://surrit.mrstcdn.store/')));
- return {page,code,metadata:metadata(html,page),playlists,media,mirrorCandidates,uuids:ids,notes:['Candidates extracted from page HTML; dynamic browser requests may be absent.','Mirror URLs are hypotheses until independently checked.','No video is downloaded or proxied by this script.']};
+ return {page,code,qualityPolicy:'1080p only; ambiguous master playlists excluded',metadata:metadata(html,page),playlists,media,mirrorCandidates,uuids:ids,notes:['Only explicit 1080p URL candidates are retained; unlabelled master playlists and lower resolutions are excluded.','Mirror URLs are hypotheses until independently checked.','No video is downloaded or proxied by this script.']};
 }
 async function get(url,headers={}){const r=await fetch(url,{headers:{'User-Agent':UA,Referer:DEFAULT_ORIGIN+'/',...headers},signal:AbortSignal.timeout(timeout)});return r;}
 async function probe(url,page){try{const r=await get(url,{Referer:page||DEFAULT_ORIGIN+'/'});const body=(await r.text()).slice(0,100000);return {url,status:r.status,contentType:r.headers.get('content-type'),playlistValid:r.ok&&body.trimStart().startsWith('#EXTM3U'),note:'Playlist only; segments and Nuvio playback not verified'};}catch(e){return {url,status:null,playlistValid:false,error:e.name};}}
