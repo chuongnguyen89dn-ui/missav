@@ -1,5 +1,6 @@
 
 import {readFileSync} from 'node:fs';
+import { chromium } from 'playwright';
 const verified = JSON.parse(readFileSync(new URL('./data/catalog-verified.json',import.meta.url),'utf8'));
 const verifiedMetadata = JSON.parse(readFileSync(new URL('./data/metadata-verified-nuvio.json',import.meta.url),'utf8'));
 const rawScan = Object.fromEntries(verified.map(f=>[f.url,f]));
@@ -49,26 +50,64 @@ function filmMeta(f){
 const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
 const ikisodaMovies=()=>getIkisodaCatalog().then(c=>c.movies||[]);
 function ikisodaMetaFor(x){const d=String(x.release||'');const meta={id:x.id,type:'movie',name:x.name||x.code||x.id,poster:x.poster||undefined,posterShape:'poster',releaseInfo:d?d.slice(0,4):undefined,released:d?new Date(d+'T00:00:00.000Z').toISOString():undefined,genres:x.genres||[],genre:x.genres||[],description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined));}
+let ikisodaBrowserPromise=null;
+async function getIkiSodaBrowser(){
+ if(!ikisodaBrowserPromise) ikisodaBrowserPromise=chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']}).catch(e=>{ikisodaBrowserPromise=null;throw e;});
+ return ikisodaBrowserPromise;
+}
+function streamMediaId(u){
+ const m=String(u||'').match(/\/(\d+)\/\1_1080p\.mp4/i);
+ return m?.[1]||null;
+}
 async function freshIkiSodaUrl(x){
- const page=x.source_page;
- const getFile=x.get_file_1080;
- if(!page||!getFile)return null;
+ const pageUrl=x.source_page;
+ if(!pageUrl)return null;
  const started=Date.now();
+ let context;
  try{
-  const r=await fetch(getFile+(getFile.includes('?')?'&':'?')+'rnd='+Date.now(),{headers:{'User-Agent':'Mozilla/5.0','Referer':page,'Origin':'https://ikisoda.com','Range':'bytes=0-1'},redirect:'manual',signal:AbortSignal.timeout(10000)});
-  const loc=r.headers.get('location');
-  const ms=Date.now()-started;
-  if((r.status===301||r.status===302||r.status===303||r.status===307||r.status===308)&&loc){console.log('[IKISODA_FRESH]',JSON.stringify({code:x.code,status:r.status,get_file_ms:ms,result:'fresh_redirect'}));return new URL(loc,getFile).toString();}
-  if(r.status===200||r.status===206){console.log('[IKISODA_FRESH]',JSON.stringify({code:x.code,status:r.status,get_file_ms:ms,result:'direct_get_file'}));return getFile;}
-  console.log('[IKISODA_FRESH]',JSON.stringify({code:x.code,status:r.status,get_file_ms:ms,result:'fallback'}));
- }catch(e){console.error('[IKISODA_FRESH]',JSON.stringify({code:x.code,get_file_ms:Date.now()-started,result:'error',error:e.message}));}
- return null;
+  const browser=await getIkiSodaBrowser();
+  context=await browser.newContext({userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',viewport:{width:1280,height:800}});
+  const page=await context.newPage();
+  const expected=String(x.media_id||streamMediaId(x.get_file_1080)||streamMediaId(x.url)||'');
+  let signed=null,getFile=null;
+  const inspect=u=>{
+   if(!u||!u.includes('_1080p.mp4'))return;
+   const mid=streamMediaId(u);
+   if(expected&&mid&&mid!==expected)return;
+   if(u.includes('/get_file/'))getFile=u;
+   if(u.includes('remote_control.php'))signed=u;
+  };
+  page.on('request',r=>inspect(r.url()));
+  page.on('response',r=>inspect(r.url()));
+  await page.goto(pageUrl,{waitUntil:'domcontentloaded',timeout:20000});
+  const player=page.locator('video, .fp-ui, .jwplayer, #kt_player, .player, [class*="player"]').first();
+  if(await player.count())await player.click({force:true,timeout:3000}).catch(()=>{});
+  const q=page.locator('[data-format="4"], a[data-format="4"]').first();
+  if(await q.count()){
+   await q.click({force:true,timeout:5000}).catch(()=>{});
+   await q.evaluate(el=>{for(const t of ['pointerdown','mousedown','mouseup','click'])el.dispatchEvent(new MouseEvent(t,{bubbles:true,cancelable:true,view:window}));}).catch(()=>{});
+  }
+  await page.evaluate(()=>{const v=document.querySelector('video');if(v){v.load();v.play().catch(()=>{});}}).catch(()=>{});
+  const deadline=Date.now()+15000;
+  while(!signed&&Date.now()<deadline){
+   await page.waitForTimeout(250);
+   if(!signed&&getFile){
+    // The player may need a second forced 1080 selection after media starts.
+    await q.click({force:true,timeout:1000}).catch(()=>{});
+   }
+  }
+  console.log('[IKISODA_BROWSER]',JSON.stringify({code:x.code,expected_media_id:expected||null,get_file:!!getFile,signed:!!signed,total_ms:Date.now()-started,result:signed?'fresh_signed':'not_found'}));
+  return signed;
+ }catch(e){
+  console.error('[IKISODA_BROWSER]',JSON.stringify({code:x.code,total_ms:Date.now()-started,result:'error',error:e.message}));
+  return null;
+ }finally{if(context)await context.close().catch(()=>{});}
 }
 async function ikisodaStreamFor(x){
  const fresh=await freshIkiSodaUrl(x);
  const url=fresh||x.url;
  if(!url)return [];
- return [{name:fresh?'IkiSoda 1080p · FRESH DIRECT':'IkiSoda 1080p · cached fallback',title:fresh?'1080p · signed on Play':'1080p · stored signed URL',url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:x.source_page||'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];
+ return [{name:fresh?'IkiSoda 1080p · LIVE BROWSER':'IkiSoda 1080p · cached fallback',title:fresh?'1080p · fresh signed URL on Play':'1080p · stored signed URL',url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:x.source_page||'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];
 }
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
@@ -284,7 +323,7 @@ if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json'){const xs=await ikisodaMovies();return json(res,{metas:xs.map(ikisodaMetaFor)});}
 if(path.startsWith('/meta/movie/ikisoda:')&&path.endsWith('.json')){const key=path.slice('/meta/movie/'.length,-5);const x=(await ikisodaMovies()).find(v=>v.id===key);return x?json(res,{meta:ikisodaMetaFor(x)}):json(res,{error:'Not found'},404);}
-if(path.startsWith('/stream/movie/ikisoda:')&&path.endsWith('.json')){const started=Date.now();const key=path.slice('/stream/movie/'.length,-5);const catalogStarted=Date.now();const x=(await ikisodaMovies()).find(v=>v.id===key);const catalogMs=Date.now()-catalogStarted;if(!x){console.log('[IKISODA_PLAY]',JSON.stringify({id:key,catalog_ms:catalogMs,total_ms:Date.now()-started,result:'not_found'}));return json(res,{streams:[]});}const streams=await ikisodaStreamFor(x);console.log('[IKISODA_PLAY]',JSON.stringify({code:x.code,id:key,catalog_ms:catalogMs,total_ms:Date.now()-started,mode:streams[0]?.name?.includes('FRESH')?'fresh':'fallback',streams:streams.length}));return json(res,{streams});}
+if(path.startsWith('/stream/movie/ikisoda:')&&path.endsWith('.json')){const started=Date.now();const key=path.slice('/stream/movie/'.length,-5);const catalogStarted=Date.now();const x=(await ikisodaMovies()).find(v=>v.id===key);const catalogMs=Date.now()-catalogStarted;if(!x){console.log('[IKISODA_PLAY]',JSON.stringify({id:key,catalog_ms:catalogMs,total_ms:Date.now()-started,result:'not_found'}));return json(res,{streams:[]});}const streams=await ikisodaStreamFor(x);console.log('[IKISODA_PLAY]',JSON.stringify({code:x.code,id:key,catalog_ms:catalogMs,total_ms:Date.now()-started,mode:streams[0]?.name?.includes('LIVE BROWSER')?'browser_fresh':'fallback',streams:streams.length}));return json(res,{streams});}
 if(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
 
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
