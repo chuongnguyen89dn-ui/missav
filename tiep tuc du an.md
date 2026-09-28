@@ -35,3 +35,6 @@ Thứ tự: (1) tìm hiểu cấu trúc trang và trích mã/poster/metadata t�
 
 ## 28/09/2026 — Chuẩn bị bộ lấy link (chưa tích hợp runtime)
 Đã tạo `scripts/extract-links.mjs`, `scripts/README.md` và `test/extract-links.test.js`. CLI nhận URL trang phim hoặc HTML lưu sẵn, xuất JSON gồm code, metadata, playlist/media candidates, UUID và giả thuyết mirror; tùy chọn `--probe` chỉ kiểm tra playlist tối đa 8 URL. Không tải video, không proxy qua Render và chưa bật quét toàn site. Không kết luận URL candidate phát được cho đến khi kiểm tra thực tế. Các file này không thay đổi `server.js` hoặc playback FTHTD-213. Cần chạy test và kiểm tra kết quả với HTML thực trước khi dùng làm crawler.
+
+## Quy định chất lượng — 1080p ONLY
+Chỉ lấy và hiển thị link 1080p. Bỏ 720p, 480p và các chất lượng khác; không tự hạ chất lượng khi 1080p thiếu hoặc lỗi. Master playlist chưa xác định rendition không được đưa vào danh sách phát. Bộ trích xuất đã thêm bộ lọc URL 1080p; các playlist master cần bước phân tích rendition riêng sau này nếu muốn tìm nhánh 1080p. Không thay đổi playback mẫu đang Live.
