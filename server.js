@@ -3,7 +3,7 @@ const PORT = Number(process.env.PORT || 3000);
 const ROOT = process.env.PUBLIC_URL?.replace(/\/$/, '') || '';
 const VIDEO = 'https://surrit.com/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/1080p/video.m3u8';
 const REF = 'https://missav.ws/';
-const id = 'missav:ft htd-213'.replace(' ', '');
+const id = 'missav:fthtd-213';
 const cors = {'access-control-allow-origin':'*','access-control-allow-methods':'GET, HEAD, OPTIONS','access-control-allow-headers':'*'};
 function json(res, data, status=200) { const body=JSON.stringify(data);res.writeHead(status, {...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(body)});res.end(body); }
 const manifest={id:'community.missav.hls.test',version:'0.1.0',name:'MissAV HLS Test',description:'Isolated 1080p header test; no HLS proxy',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-test',name:'Test 1080p'}],idPrefixes:['missav:']};
