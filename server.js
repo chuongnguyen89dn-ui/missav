@@ -79,21 +79,21 @@ async function freshIkiSodaUrl(x){
   };
   page.on('request',r=>inspect(r.url()));
   page.on('response',r=>inspect(r.url()));
-  await page.goto(pageUrl,{waitUntil:'domcontentloaded',timeout:20000});
+  await page.goto(pageUrl,{waitUntil:'domcontentloaded',timeout:8000});
   const player=page.locator('video, .fp-ui, .jwplayer, #kt_player, .player, [class*="player"]').first();
   if(await player.count())await player.click({force:true,timeout:3000}).catch(()=>{});
   const q=page.locator('[data-format="4"], a[data-format="4"]').first();
   if(await q.count()){
-   await q.click({force:true,timeout:5000}).catch(()=>{});
+   await q.click({force:true,timeout:1500}).catch(()=>{});
    await q.evaluate(el=>{for(const t of ['pointerdown','mousedown','mouseup','click'])el.dispatchEvent(new MouseEvent(t,{bubbles:true,cancelable:true,view:window}));}).catch(()=>{});
   }
   await page.evaluate(()=>{const v=document.querySelector('video');if(v){v.load();v.play().catch(()=>{});}}).catch(()=>{});
-  const deadline=Date.now()+15000;
+  const deadline=Date.now()+5000;
   while(!signed&&Date.now()<deadline){
    await page.waitForTimeout(250);
    if(!signed&&getFile){
     // The player may need a second forced 1080 selection after media starts.
-    await q.click({force:true,timeout:1000}).catch(()=>{});
+    await q.click({force:true,timeout:300}).catch(()=>{});
    }
   }
   console.log('[IKISODA_BROWSER]',JSON.stringify({code:x.code,expected_media_id:expected||null,get_file:!!getFile,signed:!!signed,total_ms:Date.now()-started,result:signed?'fresh_signed':'not_found'}));
