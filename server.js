@@ -6,6 +6,13 @@ const rawScan = Object.fromEntries(verified.map(f=>[f.url,f]));
 const filmById = new Map(verified.map(f=>['missav:'+f.code.toLowerCase(),f]));
 function uniqNames(items){return [...new Set((items||[]).map(x=>typeof x==='string'?x:x?.name).map(x=>String(x||'').trim()).filter(Boolean))];}
 function metaLinks(items,category){return (items||[]).filter(x=>x&&x.name).map(x=>({name:String(x.name).trim(),category,url:x.url||'stremio:///search?search='+encodeURIComponent(String(x.name).trim())}));}
+function compactTitle(value,max=58){
+ const s=String(value||'').replace(/\s+/g,' ').trim();
+ if(s.length<=max)return s;
+ const cut=s.slice(0,max+1);
+ const boundary=cut.lastIndexOf(' ');
+ return (boundary>=Math.floor(max*0.65)?cut.slice(0,boundary):s.slice(0,max)).trimEnd()+'…';
+}
 function filmMeta(f){
  const m=verifiedMetadata[f.code]||{};
  const genres=uniqNames(m.genres).length?uniqNames(m.genres):(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean);
@@ -22,8 +29,9 @@ function filmMeta(f){
  ];
  const meta={
   id:'missav:'+f.code.toLowerCase(),type:'movie',
-  // Full movie title only. Nuvio handles visual truncation/ellipsis in its UI.
-  name:m.title||f.title||f.code,
+  // Nuvio does not clamp this hero title reliably on iOS, so cap only the display name.
+  // Full source metadata/description stays untouched in its own fields.
+  name:compactTitle(m.title||f.title||f.code),
   poster:m.poster||f.poster||undefined,posterShape:'poster',
   description:m.description||f.description||undefined,
   releaseInfo:date?date.slice(0,4):undefined,
