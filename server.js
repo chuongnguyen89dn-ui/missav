@@ -1,10 +1,41 @@
 
 import {readFileSync} from 'node:fs';
 const verified = JSON.parse(readFileSync(new URL('./data/catalog-verified.json',import.meta.url),'utf8'));
+const verifiedMetadata = JSON.parse(readFileSync(new URL('./data/metadata-verified-nuvio.json',import.meta.url),'utf8'));
 const rawScan = Object.fromEntries(verified.map(f=>[f.url,f]));
 const filmById = new Map(verified.map(f=>['missav:'+f.code.toLowerCase(),f]));
-function filmMeta(f){return {id:'missav:'+f.code.toLowerCase(),type:'movie',name:f.title||f.code,poster:f.poster||undefined,posterShape:'poster',description:f.description||'',releaseInfo:f.release_date||undefined,genres:(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean),links:f.url?[{name:'Source',category:'source',url:f.url}]:[]};}
-const publicManifest={id:'community.missav.hls.test',version:'0.3.0',name:'MissAV 1080p',description:'Verified 1080p catalog from release pages 1-100 with available Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
+function uniqNames(items){return [...new Set((items||[]).map(x=>typeof x==='string'?x:x?.name).map(x=>String(x||'').trim()).filter(Boolean))];}
+function metaLinks(items,category){return (items||[]).filter(x=>x&&x.name).map(x=>({name:String(x.name).trim(),category,url:x.url||'stremio:///search?search='+encodeURIComponent(String(x.name).trim())}));}
+function filmMeta(f){
+ const m=verifiedMetadata[f.code]||{};
+ const genres=uniqNames(m.genres).length?uniqNames(m.genres):(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean);
+ const cast=uniqNames(m.actresses);
+ const director=uniqNames(m.directors);
+ const date=m.release_date||f.release_date||'';
+ const links=[
+  ...metaLinks(m.actresses,'actor'),
+  ...genres.map(name=>({name,category:'genre',url:'stremio:///search?search='+encodeURIComponent(name)})),
+  ...metaLinks(m.directors,'director'),
+  ...metaLinks(m.series,'series'),
+  ...metaLinks(m.makers,'studio'),
+  ...metaLinks(m.labels,'label')
+ ];
+ const meta={
+  id:'missav:'+f.code.toLowerCase(),type:'movie',
+  name:m.title||f.title||f.code,
+  poster:m.poster||f.poster||undefined,posterShape:'poster',
+  description:m.description||f.description||undefined,
+  releaseInfo:date?date.slice(0,4):undefined,
+  released:date?new Date(date+'T00:00:00.000Z').toISOString():undefined,
+  genres,genre:genres,
+  cast:cast.length?cast:undefined,
+  director:director.length?director:undefined,
+  language:'Tiếng Nhật',
+  links
+ };
+ return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
+}
+const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
 function publicStream(f){
  const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');
  const u=new URL(source.url);
