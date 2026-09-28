@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
+import {dirname} from 'node:path';
 
 const DEFAULT_ORIGIN='https://missav.ws';
 const UA='Mozilla/5.0 (compatible; MissAV-link-diagnostic/1.0)';
@@ -40,7 +41,7 @@ async function main(){
  let html;if(input)html=await readFile(input,'utf8');else{const r=await get(base);if(!r.ok)throw Error('Page HTTP '+r.status);html=await r.text();}
  const result=extract(html,base);
  if(check)result.probes=await Promise.all([...result.playlists,...result.mirrorCandidates].slice(0,8).map(u=>probe(u,base)));
- await mkdir(new URL('.',pathToFileURL(new URL(out,'file://'+process.cwd()+'/').pathname)),{recursive:true}).catch(()=>{});
+ await mkdir(dirname(out),{recursive:true});
  await writeFile(out,JSON.stringify({...result,extractedAt:new Date().toISOString()},null,2)+'\n');
  console.log(JSON.stringify({out,code:result.code,playlists:result.playlists.length,mirrorCandidates:result.mirrorCandidates.length,probes:result.probes?.length||0}));
 }
