@@ -39,7 +39,31 @@ const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissA
 const ikisodaId='ikisoda:hsm-061';
 const ikisodaMeta={id:ikisodaId,type:'movie',name:'HSM-061 — IkiSoda 1080p Test',description:'IkiSoda direct 1080p MP4 test'};
 const ikisoda1080='https://ikisoda.com/get_file/18/7d6991d170ace751543cc36b25648b3cee75e9f524/22000/22675/22675_1080p.mp4/';
-const ikisodaStreams=[{name:'IkiSoda 1080p · DIRECT',title:'1080p · direct MP4 test',url:ikisoda1080,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/',Origin:'https://ikisoda.com','User-Agent':'Mozilla/5.0'}}}}];
+const ikisodaStreams=[{name:'IkiSoda 1080p · RESOLVER',title:'1080p · resolve fresh signed MP4',url:(ROOT || 'https://missav-uimx.onrender.com')+'/ikisoda/hsm-061.mp4'}];
+async function ikisodaResolve(req,res){
+ const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
+ try{
+  const page=await fetch(pageUrl,{headers:{'User-Agent':'Mozilla/5.0','Accept':'text/html,*/*'},redirect:'follow',signal:AbortSignal.timeout(15000)});
+  const html=await page.text();
+  const raw=[...html.matchAll(/https?:\\?\/\\?\/ikisoda\.com\\?\/get_file\\?\/[^"'<>\\s]+?22675_1080p\.mp4\\?\/?(?:\\?[^"'<>\\s]*)?/gi)].map(m=>m[0].replaceAll('\\/','/').replaceAll('&amp;','&'));
+  const getFile=raw[0];
+  if(!getFile){console.log('[IKISODA_RESOLVE]',JSON.stringify({stage:'html',status:page.status,found:false}));return json(res,{error:'1080 URL not found in current IkiSoda page'},502);}
+  const rnd=getFile.includes('?')?getFile:getFile+'?rnd='+Date.now();
+  const headers={'User-Agent':'Mozilla/5.0','Referer':pageUrl,'Origin':'https://ikisoda.com'};
+  const probe=await fetch(rnd,{headers:{...headers,Range:'bytes=0-1'},redirect:'manual',signal:AbortSignal.timeout(15000)});
+  const location=probe.headers.get('location');
+  console.log('[IKISODA_RESOLVE]',JSON.stringify({stage:'get_file',status:probe.status,hasLocation:!!location}));
+  if(location){
+   const signed=new URL(location,rnd).toString();
+   res.writeHead(302,{...cors,location:signed,'cache-control':'no-store'});
+   return res.end();
+  }
+  if(probe.ok||probe.status===206){
+   res.writeHead(302,{...cors,location:rnd,'cache-control':'no-store'});return res.end();
+  }
+  return json(res,{error:'IkiSoda resolver failed',upstreamStatus:probe.status},502);
+ }catch(e){console.error('[IKISODA_ERROR]',e.message);return json(res,{error:'IkiSoda unavailable',type:e.name,message:e.message},502);}
+}
 function publicStream(f){
  const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');
  const u=new URL(source.url);
@@ -230,7 +254,7 @@ if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json')return json(res,{metas:[ikisodaMeta]});
 if(path==='/meta/movie/'+ikisodaId+'.json')return json(res,{meta:ikisodaMeta});
-if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});
+if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});\nif(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
 
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
 if(path.startsWith('/stream/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/stream/movie/'.length,-5));return f?json(res,{streams:publicStream(f)}):json(res,{streams:[]});}
