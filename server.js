@@ -39,7 +39,7 @@ const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissA
 const ikisodaId='ikisoda:hsm-061';
 const ikisodaMeta={id:ikisodaId,type:'movie',name:'HSM-061 — IkiSoda 1080p Test',description:'IkiSoda direct 1080p MP4 test'};
 const ikisoda1080='https://ikisoda.com/get_file/18/7d6991d170ace751543cc36b25648b3cee75e9f524/22000/22675/22675_1080p.mp4/';
-const ikisodaStreams=[{name:'IkiSoda 1080p · RESOLVER',title:'1080p · resolve fresh signed MP4',url:(ROOT || 'https://missav-uimx.onrender.com')+'/ikisoda/hsm-061.mp4'}];
+const ikisodaStreams=[{name:'IkiSoda 1080p · RESOLVER',title:'1080p · resolve fresh signed MP4',url:'https://missav-uimx.onrender.com/ikisoda/hsm-061.mp4'}];
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
  try{
