@@ -1,0 +1,1490 @@
+    ],
+    "script_hls": [],
+    "code": "MIDA-783",
+    "url": "https://missav.ws/vi/mida-783",
+    "listing_title": "Cô Mayu Shino, cố vấn câu lạc bộ bơi lội với vòng một cỡ J, đã phát điên vì dục vọng của một sinh viên lực lưỡng, người đã biến thành một con khỉ khi hắn ta liên tục cưỡng hiếp cô,...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "ngực to, Cuộc đua bơi lội / áo tắm của trường, công việc đơn lẻ, bánh kem, da mặt, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/8a47537d-dccb-4a46-a1f8-a7ac6f7e20f5/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/8a47537d-dccb-4a46-a1f8-a7ac6f7e20f5/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:22"
+  },
+  "https://missav.ws/vi/mida-781": {
+    "title": "MIDA-781 \"Tôi thích quan hệ bằng miệng!\" Cô em gái kế tuổi teen của tôi, người đã trở thành người thân trong gia đình qua cuộc hôn nhân thứ hai của bố mẹ tôi, nài nỉ tôi cho cô ấy quan hệ v... - Chiharu Okui",
+    "description": "Toàn bộ video được quay từ góc nhìn người thứ nhất, với giọng nói nhẹ nhàng thì thầm bên tai, những lời nói tục tĩu và sức mạnh áp đảo của vòng một cỡ H-cu",
+    "poster": "https://fourhoi.com/mida-781/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mida-781",
+    "video_sources": [
+      "blob:https://missav.ws/7bc56498-2d3a-4d50-9f09-7dea95c3b337"
+    ],
+    "script_hls": [],
+    "code": "MIDA-781",
+    "url": "https://missav.ws/vi/mida-781",
+    "listing_title": "\"Tôi thích quan hệ bằng miệng!\" Cô em gái kế tuổi teen của tôi, người đã trở thành người thân trong gia đình qua cuộc hôn nhân thứ hai của bố mẹ tôi, nài nỉ tôi cho cô ấy quan hệ v...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "công việc đơn lẻ, hóa trang, chị, thổi kèn, Từ dơ bẩn, chủ quan, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/f3922a04-dd47-4cd0-9fc4-7cc07a56e9d1/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/f3922a04-dd47-4cd0-9fc4-7cc07a56e9d1/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:25"
+  },
+  "https://missav.ws/vi/mida-780": {
+    "title": "MIDA-780 Một liệu trình vắt sữa bất tận, không ngừng nghỉ ngay cả sau khi bạn đã lên đỉnh nhiều lần. Một thiên đường tắm hơi chuyên về khoái cảm khổ dâm, Himari, sẽ dẫn bạn đến cực khoái mạ...",
+    "description": "Dù bạn có xuất tinh, chúng tôi cũng không dừng lại! Chào mừng đến với thiên đường khổ dâm của chúng tôi, nơi chúng tôi sẽ phá hủy sự tỉnh táo của bạn bằng ",
+    "poster": "https://fourhoi.com/mida-780/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mida-780",
+    "video_sources": [
+      "blob:https://missav.ws/352d3744-80c0-4ef6-aee1-78f5ac81838a"
+    ],
+    "script_hls": [],
+    "code": "MIDA-780",
+    "url": "https://missav.ws/vi/mida-780",
+    "listing_title": "Một liệu trình vắt sữa bất tận, không ngừng nghỉ ngay cả sau khi bạn đã lên đỉnh nhiều lần. Một thiên đường tắm hơi chuyên về khoái cảm khổ dâm, Himari, sẽ dẫn bạn đến cực khoái mạ...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "Đĩ, ngực to, công việc đơn lẻ, thổi kèn, paizuri, hi-vision, Loại trừ, xà phòng sức khỏe, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/0fada10e-659f-480d-9fa7-7c6cc340cd26/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/0fada10e-659f-480d-9fa7-7c6cc340cd26/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:29"
+  },
+  "https://missav.ws/vi/mida-758": {
+    "title": "MIDA-758 Cô thư ký mới vào nghề bị ông chủ biến thái đáng ghét huấn luyện để tè dầm, hắn điều khiển vùng kín của cô bằng một máy rung hút cố định - Misaki Mayu - Mayu Misaki",
+    "description": "",
+    "poster": "https://fourhoi.com/mida-758/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mida-758",
+    "video_sources": [
+      "blob:https://missav.ws/e324b327-2b61-4d66-9a13-712c4a1b9ddc"
+    ],
+    "script_hls": [],
+    "code": "MIDA-758",
+    "url": "https://missav.ws/vi/mida-758",
+    "listing_title": "Cô thư ký mới vào nghề bị ông chủ biến thái đáng ghét huấn luyện để tè dầm, hắn điều khiển vùng kín của cô bằng một máy rung hút cố định - Misaki Mayu",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "thư ký, cao, quần bó sát, công việc đơn lẻ, rung cảm, Đi tiểu / rò rỉ, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/ae72db0c-fc56-401c-b553-715f3bfd6465/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/ae72db0c-fc56-401c-b553-715f3bfd6465/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:33"
+  },
+  "https://missav.ws/vi/mida-744": {
+    "title": "MIDA-744 Mối tình vụng trộm của tôi là tuyệt vời nhất. Tình dục, cuộc sống thường nhật, mọi thứ về người tình mảnh mai, quyến rũ của tôi đều mê hoặc tôi, và những cuộc ái ân ngọt ngào, khiế... - Mia Nanasawa",
+    "description": "",
+    "poster": "https://fourhoi.com/mida-744/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mida-744",
+    "video_sources": [
+      "blob:https://missav.ws/6ee33240-257f-4af4-9ec8-3bda6c329c52"
+    ],
+    "script_hls": [],
+    "code": "MIDA-744",
+    "url": "https://missav.ws/vi/mida-744",
+    "listing_title": "Mối tình vụng trộm của tôi là tuyệt vời nhất. Tình dục, cuộc sống thường nhật, mọi thứ về người tình mảnh mai, quyến rũ của tôi đều mê hoặc tôi, và những cuộc ái ân ngọt ngào, khiế...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "cô gái xinh đẹp, ngoại tình, công việc đơn lẻ, hôn, cao bồi, thổi kèn, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/46301525-2f25-449e-abba-e34bf531b64a/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/46301525-2f25-449e-abba-e34bf531b64a/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:37"
+  },
+  "https://missav.ws/vi/miab-677": {
+    "title": "MIAB-677 Người Phụ Nữ Trong Mơ Vol. 101 Miyu Aizawa",
+    "description": "Loạt phim xuất tinh cực đỉnh mang đến làn gió mới từ nữ hoàng hàng đầu của Kikatan, Miyu Aizawa, và nữ đạo diễn dâm đãng, Nao Masaki! Màn oral sex tuyệt đỉ",
+    "poster": "https://fourhoi.com/miab-677/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/miab-677",
+    "video_sources": [
+      "blob:https://missav.ws/0b637395-56f3-4444-9110-32e0616c3a05"
+    ],
+    "script_hls": [],
+    "code": "MIAB-677",
+    "url": "https://missav.ws/vi/miab-677",
+    "listing_title": "Người Phụ Nữ Trong Mơ Vol. 101 Miyu Aizawa",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Moody's",
+    "actors": "",
+    "genres": "tôn sùng khác, công việc đơn lẻ, thổi kèn, bukkake, nuốt chửng, da mặt, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/938e7521-3903-43c4-b068-37c2915dd5e8/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/938e7521-3903-43c4-b068-37c2915dd5e8/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:41"
+  },
+  "https://missav.ws/vi/mfyd-195": {
+    "title": "MFYD-195 Một bà nội trợ có tính cách giản dị, vòng một đầy đặn và ham muốn tình dục mạnh mẽ, từng thực hiện các buổi phát trực tiếp khiêu dâm trên mạng xã hội, nay ra mắt trong ngành phim n... - Yura Tsukishiro",
+    "description": "",
+    "poster": "https://fourhoi.com/mfyd-195/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-195",
+    "video_sources": [
+      "blob:https://missav.ws/4d1f86b9-9953-43df-b24f-f3815214a205"
+    ],
+    "script_hls": [],
+    "code": "MFYD-195",
+    "url": "https://missav.ws/vi/mfyd-195",
+    "listing_title": "Một bà nội trợ có tính cách giản dị, vòng một đầy đặn và ham muốn tình dục mạnh mẽ, từng thực hiện các buổi phát trực tiếp khiêu dâm trên mạng xã hội, nay ra mắt trong ngành phim n...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, ngực to, công việc đơn lẻ, bánh kem, tác phẩm đầu tay, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-33/177018773/177018773_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/1160ed56-f254-4d24-b1f7-3198aedac1e1/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/1160ed56-f254-4d24-b1f7-3198aedac1e1/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:50"
+  },
+  "https://missav.ws/vi/mfyd-194": {
+    "title": "MFYD-194 \"Làn da trắng mịn, vẻ thanh lịch và sự quyến rũ.\" Một người vợ da trắng thuần khiết đến từ Kyoto, dâm đãng hơn bạn tưởng tượng. Siêu sao Suzuka Shirato (32 tuổi) ra mắt trong ngành...",
+    "description": "Một ngôi sao đang lên, phụ nữ đã kết hôn đến từ Kyoto, ra mắt độc quyền với TAMEIKE! Với làn da trắng mịn như lụa, vẻ đẹp và sự thanh lịch tràn đầy, cô khẳ",
+    "poster": "https://fourhoi.com/mfyd-194/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-194",
+    "video_sources": [
+      "blob:https://missav.ws/11fd54e6-6ff8-4b0a-9bc7-f122db494b24"
+    ],
+    "script_hls": [],
+    "code": "MFYD-194",
+    "url": "https://missav.ws/vi/mfyd-194",
+    "listing_title": "\"Làn da trắng mịn, vẻ thanh lịch và sự quyến rũ.\" Một người vợ da trắng thuần khiết đến từ Kyoto, dâm đãng hơn bạn tưởng tượng. Siêu sao Suzuka Shirato (32 tuổi) ra mắt trong ngành...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, công việc đơn lẻ, da mặt, tác phẩm đầu tay, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/61b6cfb8-56a8-43c7-8911-56f0c246bbe1/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/61b6cfb8-56a8-43c7-8911-56f0c246bbe1/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:53"
+  },
+  "https://missav.ws/vi/mfyd-191": {
+    "title": "MFYD-191 Một cô giáo đã kết hôn, chán nản, biến thành gái điếm lúc 5 giờ chiều. Sau giờ học, cô giáo, giờ đã trở thành một kẻ biến thái phóng túng về tình dục, tiếp tục cưỡng hiếp chúng tôi... - Hasumi Claire",
+    "description": "Sau giờ học, trường học trở thành bãi săn của cô giáo (một người cuồng dâm)! Giữa lịch trình bận rộn và mối quan hệ căng thẳng hàng ngày với chồng, Claire ",
+    "poster": "https://fourhoi.com/mfyd-191/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-191",
+    "video_sources": [
+      "blob:https://missav.ws/91d36838-427d-4c89-b79a-6a1a0e8154ea"
+    ],
+    "script_hls": [],
+    "code": "MFYD-191",
+    "url": "https://missav.ws/vi/mfyd-191",
+    "listing_title": "Một cô giáo đã kết hôn, chán nản, biến thành gái điếm lúc 5 giờ chiều. Sau giờ học, cô giáo, giờ đã trở thành một kẻ biến thái phóng túng về tình dục, tiếp tục cưỡng hiếp chúng tôi...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, giáo viên nữ, Đĩ, Phụ nữ đã lập gia đình/Bà nội trợ, công việc đơn lẻ, cao bồi, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/094678a6-f347-4398-8e5b-dff55236971f/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/094678a6-f347-4398-8e5b-dff55236971f/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:43:58"
+  },
+  "https://missav.ws/vi/mfyd-190": {
+    "title": "MFYD-190 Dự án hợp tác kỷ niệm 20 năm S1 x TAMEIKE: Trong khi vợ tôi, đang mang thai đứa con thứ hai, về thăm bố mẹ, tôi đã quan hệ tình dục rất nhiều ở nhà với cô giáo của con trai cả. mir... - miru",
+    "description": "Một ngày nọ, khi vợ tôi, đang mang thai đứa con thứ hai, và con trai cả của chúng tôi đến thăm bố mẹ vợ, cô giáo mầm non yêu quý của tôi, Miru, đến nhà tôi",
+    "poster": "https://fourhoi.com/mfyd-190/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-190",
+    "video_sources": [
+      "blob:https://missav.ws/4df28e2d-1c47-4a56-9abd-45e3cd4e4d8e"
+    ],
+    "script_hls": [],
+    "code": "MFYD-190",
+    "url": "https://missav.ws/vi/mfyd-190",
+    "listing_title": "Dự án hợp tác kỷ niệm 20 năm S1 x TAMEIKE: Trong khi vợ tôi, đang mang thai đứa con thứ hai, về thăm bố mẹ, tôi đã quan hệ tình dục rất nhiều ở nhà với cô giáo của con trai cả. mir...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, công việc đơn lẻ, cao bồi, da mặt, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/6096d937-b65e-4c9b-bcd5-a4823769b20f/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/6096d937-b65e-4c9b-bcd5-a4823769b20f/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:02"
+  },
+  "https://missav.ws/vi/mfyd-183": {
+    "title": "MFYD-183 Sự hợp tác độc quyền giữa hai nữ hoàng bò sát của TAMEIKE W! Hai chuyên gia tình dục và những quái vật sức bền phi thường lao vào một cuộc \"vắt kiệt tinh trùng\" suốt đêm không ngừn... - Ruisa Miyakozuki",
+    "description": "Để làm cạn kiệt hoàn toàn quần thể tinh trùng trên Trái Đất, hai sinh vật ngoài hành tinh (dạng sống bò sát) Futaba Otani và Ruisa Tsuki, đang ẩn náu trong",
+    "poster": "https://fourhoi.com/mfyd-183/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-183",
+    "video_sources": [
+      "blob:https://missav.ws/2e0ca86e-3d7b-40ca-8f86-9acf3fb82d60",
+      "blob:https://missav.ws/a508a726-fa29-450c-877d-3bbc3306f8a7"
+    ],
+    "script_hls": [],
+    "code": "MFYD-183",
+    "url": "https://missav.ws/vi/mfyd-183",
+    "listing_title": "Sự hợp tác độc quyền giữa hai nữ hoàng bò sát của TAMEIKE W! Hai chuyên gia tình dục và những quái vật sức bền phi thường lao vào một cuộc \"vắt kiệt tinh trùng\" suốt đêm không ngừn...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, bánh kem, 3P/4P, Hậu cung, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/eedc337e-55ce-4a0b-9c11-87fe9d14b008/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/eedc337e-55ce-4a0b-9c11-87fe9d14b008/playlist.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://svacdn77.tsyndicate.com/6yUOiTgfeO_liYFnXbxqeg==,1790581504/media=hlsA/multi=636x360:630x360,442x250:440x250/videos/e/3/8b0f663bd8489ea6662fc6e12a985980ca0155/630x360.mp4.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:07"
+  },
+  "https://missav.ws/vi/mfyd-182": {
+    "title": "MFYD-182 Cẩm nang của Kanae Yumemi về đời sống tình dục vợ chồng thực sự viên mãn! Bằng cách thực hành 6 phương pháp này, bạn cũng có thể vượt qua tình trạng thiếu ham muốn tình dục và có đ...",
+    "description": "\"Hãy xem video này và bạn chắc chắn sẽ vượt qua được tình trạng hôn nhân thiếu tình dục!\" Hãy khơi lại ngọn lửa đam mê thời độc thân của bạn... Yumemi Kana",
+    "poster": "https://fourhoi.com/mfyd-182/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/mfyd-182",
+    "video_sources": [
+      "blob:https://missav.ws/8ad6082f-160c-4ff3-b629-463668fb3aa3"
+    ],
+    "script_hls": [],
+    "code": "MFYD-182",
+    "url": "https://missav.ws/vi/mfyd-182",
+    "listing_title": "Cẩm nang của Kanae Yumemi về đời sống tình dục vợ chồng thực sự viên mãn! Bằng cách thực hành 6 phương pháp này, bạn cũng có thể vượt qua tình trạng thiếu ham muốn tình dục và có đ...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "溜池ゴロー",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, công việc đơn lẻ, bánh kem, Làm cách nào để, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/b450b72b-1390-46ee-bd6e-026955420a46/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/b450b72b-1390-46ee-bd6e-026955420a46/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:10"
+  },
+  "https://missav.ws/vi/manx-034": {
+    "title": "MANX-034 Căn phòng gào thét: Bị giam cầm và cưỡng hiếp đến khi suy sụp - Kikuno Ran - Ran Kikuno",
+    "description": "Đây là một bộ sưu tập các đoạn video được quay bởi một người đàn ông bệnh hoạn như một thú vui, hắn thích thú việc khiến phụ nữ liên tục đạt cực khoái. Đó ",
+    "poster": "https://fourhoi.com/manx-034/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/manx-034",
+    "video_sources": [
+      "blob:https://missav.ws/f9cdf347-3317-48ad-9120-b7bbb2cdc885",
+      "blob:https://missav.ws/b7972a8d-09b9-446d-8420-8875fc013a9c",
+      "blob:https://missav.ws/43256771-a403-4ded-ba86-0217348bb510"
+    ],
+    "script_hls": [],
+    "code": "MANX-034",
+    "url": "https://missav.ws/vi/manx-034",
+    "listing_title": "Căn phòng gào thét: Bị giam cầm và cưỡng hiếp đến khi suy sụp - Kikuno Ran",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Fitch",
+    "actors": "",
+    "genres": "kiềm chế, ngực to, công việc đơn lẻ, Hệ thống khó chịu/cứng, bánh kem, hi-vision, Loại trừ, đạt cực khoái",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/180356637/master/180356637_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-24/180356637/180356637_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-33/177018773/177018773_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/f2bcd9bc-4bef-4ab3-8567-6300903bef4b/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/f2bcd9bc-4bef-4ab3-8567-6300903bef4b/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:22"
+  },
+  "https://missav.ws/vi/kibd-355": {
+    "title": "KIBD-355 94 cú thúc liên tiếp mạnh mẽ vào một cô nàng đầy đặn, gợi cảm với vòng ba khủng! Narumi Miu - Miu Narumi",
+    "description": "",
+    "poster": "https://fourhoi.com/kibd-355/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/kibd-355",
+    "video_sources": [
+      "blob:https://missav.ws/ae3f5e8d-a3ba-4020-80f6-2b45f452f4a2",
+      "blob:https://missav.ws/d9a433c7-cf69-45e8-93df-24008d0fa82a"
+    ],
+    "script_hls": [],
+    "code": "KIBD-355",
+    "url": "https://missav.ws/vi/kibd-355",
+    "listing_title": "94 cú thúc liên tiếp mạnh mẽ vào một cô nàng đầy đặn, gợi cảm với vòng ba khủng! Narumi Miu",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "kira☆kira",
+    "actors": "",
+    "genres": "cô gái, mông to, tôn sùng mông, công việc đơn lẻ, bánh kem, hi-vision, Loại trừ, mặt sau",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-24/180356637/180356637_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/8a9661b3-aae8-4e31-ba75-4f8d1cc9f6c0/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/8a9661b3-aae8-4e31-ba75-4f8d1cc9f6c0/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:26"
+  },
+  "https://missav.ws/vi/kam-282": {
+    "title": "KAM-282 Khám phụ khoa biến thái: Một bác sĩ phụ khoa dâm đãng khám kỹ lưỡng bộ phận sinh dục của một người vợ xinh đẹp đến khám sức khỏe định kỳ. 05 Yuri Sasahara - sasahara yuri",
+    "description": "",
+    "poster": "https://fourhoi.com/kam-282/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/kam-282",
+    "video_sources": [
+      "blob:https://missav.ws/52c4f12e-fc71-471d-8f94-452ca072ebe3",
+      "blob:https://missav.ws/fdfac992-6570-41d5-b185-a077103b4ebc"
+    ],
+    "script_hls": [],
+    "code": "KAM-282",
+    "url": "https://missav.ws/vi/kam-282",
+    "listing_title": "Khám phụ khoa biến thái: Một bác sĩ phụ khoa dâm đãng khám kỹ lưỡng bộ phận sinh dục của một người vợ xinh đẹp đến khám sức khỏe định kỳ. 05 Yuri Sasahara",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "カルマ",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, Voyeur/Nhìn Trộm, công việc đơn lẻ, bánh kem, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/1f2b0c24-e22d-472d-868f-582abbb40586/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/1f2b0c24-e22d-472d-868f-582abbb40586/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:31"
+  },
+  "https://missav.ws/vi/kam-281": {
+    "title": "KAM-281 [Dạy kèm riêng] Quay phim lén cảnh một gia sư đã kết hôn và một học sinh có dương vật rất lớn quan hệ tình dục trong phòng riêng [Cấm quay phim bằng 10 máy quay] (4) Reiko Kobayaka... - Kobayakawa Reiko",
+    "description": "Vụ rò rỉ gây sốc, phần 4! Một gia sư riêng được thuê để giúp con trai cải thiện điểm số bài kiểm tra, nhưng hóa ra cô ấy lại là một người phụ nữ đã kết hôn",
+    "poster": "https://fourhoi.com/kam-281/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/kam-281",
+    "video_sources": [
+      "blob:https://missav.ws/1ff3ec2a-03ed-43b4-b423-5886ee9e7e21",
+      "blob:https://missav.ws/dfffa3ad-ee00-4da0-9818-bed67905e5f6"
+    ],
+    "script_hls": [],
+    "code": "KAM-281",
+    "url": "https://missav.ws/vi/kam-281",
+    "listing_title": "[Dạy kèm riêng] Quay phim lén cảnh một gia sư đã kết hôn và một học sinh có dương vật rất lớn quan hệ tình dục trong phòng riêng [Cấm quay phim bằng 10 máy quay] (4) Reiko Kobayaka...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "カルマ",
+    "actors": "",
+    "genres": "phụ nữ trưởng thành, Phụ nữ đã lập gia đình/Bà nội trợ, ngực to, Voyeur/Nhìn Trộm, công việc đơn lẻ, bánh kem, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/bbef0ddf-b11b-41b1-a6d9-d5e131bbba11/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/bbef0ddf-b11b-41b1-a6d9-d5e131bbba11/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:35"
+  },
+  "https://missav.ws/vi/jufe-630": {
+    "title": "JUFE-630 Phim tài liệu nghiệp dư về chuyện ấy của bố: Một cuộc \"yêu\" nồng nhiệt, mãnh liệt và đầy gợi cảm với rất nhiều dịch cơ thể và mồ hôi. - Kousaka Mia",
+    "description": "Tôi tìm thấy một cô gái trẻ làm việc văn phòng, có vẻ trầm lặng và nghiêm túc tên là Mia trên một trang web tìm \"sugar daddy\" và mua cô ấy về nhà tôi để là",
+    "poster": "https://fourhoi.com/jufe-630/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/jufe-630",
+    "video_sources": [
+      "blob:https://missav.ws/d86be415-d85d-4400-91ec-7e5cace53b79",
+      "blob:https://missav.ws/06b35626-4292-4b12-821c-3e066f567a75"
+    ],
+    "script_hls": [],
+    "code": "JUFE-630",
+    "url": "https://missav.ws/vi/jufe-630",
+    "listing_title": "Phim tài liệu nghiệp dư về chuyện ấy của bố: Một cuộc \"yêu\" nồng nhiệt, mãnh liệt và đầy gợi cảm với rất nhiều dịch cơ thể và mồ hôi.",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Fitch",
+    "actors": "",
+    "genres": "ngực to, công việc đơn lẻ, hôn, bánh kem, bắn tinh, đẫm mồ hôi, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/180356637/master/180356637_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-24/180356637/180356637_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-33/177018773/177018773_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/8e31ad69-0751-44e2-8a01-89e0ce477157/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/8e31ad69-0751-44e2-8a01-89e0ce477157/playlist.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://svacdn77.tsyndicate.com/iz3vJf9W953MTs8tZqA5fQ==,1790581537/media=hlsA/multi=848x480:840x480,636x360:630x360,442x250:440x250/videos/c/7/fcb1275cff3d83a2483a01f84153bfe9a7c4ef/840x480.mp4.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:41"
+  },
+  "https://missav.ws/vi/hmn-918": {
+    "title": "HMN-918 Tôi xin giới thiệu với các bạn cô bạn gái cực kỳ quyến rũ của tôi. Ham muốn tình dục của cô ấy ở tuổi 20 thật đáng kinh ngạc. Cô ấy dễ dàng đạt cực khoái và rất dễ bị kích thích, đ... - Maria Ayase",
+    "description": "Để tôi giới thiệu với các bạn cô bạn gái cực kỳ ham muốn của tôi (hơn cả bạn tình, nhưng chưa hẳn là bạn gái). Cô ấy là sinh viên đại học, làm thêm ở một p",
+    "poster": "https://fourhoi.com/hmn-918/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hmn-918",
+    "video_sources": [
+      "blob:https://missav.ws/a67a2da4-01fd-4279-9fea-31f258bf52bc"
+    ],
+    "script_hls": [],
+    "code": "HMN-918",
+    "url": "https://missav.ws/vi/hmn-918",
+    "listing_title": "Tôi xin giới thiệu với các bạn cô bạn gái cực kỳ quyến rũ của tôi. Ham muốn tình dục của cô ấy ở tuổi 20 thật đáng kinh ngạc. Cô ấy dễ dàng đạt cực khoái và rất dễ bị kích thích, đ...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "本中",
+    "actors": "",
+    "genres": "yêu, Nữ sinh viên đại học, Đĩ, công việc đơn lẻ, bánh kem, hi-vision, Loại trừ, hẹn hò",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/9b18a15f-3868-4652-b1a2-0599933e7877/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/9b18a15f-3868-4652-b1a2-0599933e7877/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:47"
+  },
+  "https://missav.ws/vi/hmn-907": {
+    "title": "HMN-907 Mắc kẹt trong âm mưu của ông chủ, nữ phóng viên gầy gò Asahina Sara bị cưỡng hiếp tập thể trong khi bạn trai say xỉn của cô bất tỉnh bên cạnh, liên tục đạt cực khoái và bị lấp đầy... - Sara Asahina",
+    "description": "Nữ phóng viên nổi tiếng Asahina Sara sở hữu vẻ ngoài thanh lịch, đôi chân dài thon thả và trên hết là thân hình đáng kinh ngạc với vòng eo chỉ 45cm, thu hú",
+    "poster": "https://fourhoi.com/hmn-907/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hmn-907",
+    "video_sources": [
+      "blob:https://missav.ws/31e213c5-6641-4795-9ec3-870c0a5c7e88"
+    ],
+    "script_hls": [],
+    "code": "HMN-907",
+    "url": "https://missav.ws/vi/hmn-907",
+    "listing_title": "Mắc kẹt trong âm mưu của ông chủ, nữ phóng viên gầy gò Asahina Sara bị cưỡng hiếp tập thể trong khi bạn trai say xỉn của cô bất tỉnh bên cạnh, liên tục đạt cực khoái và bị lấp đầy...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "本中",
+    "actors": "",
+    "genres": "nữ phát thanh viên, cô gái xinh đẹp, mảnh khảnh, công việc đơn lẻ, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-33/177018773/177018773_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/2a365176-8105-4652-ae8c-20cc7e0258cb/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/2a365176-8105-4652-ae8c-20cc7e0258cb/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:50"
+  },
+  "https://missav.ws/vi/hmn-903": {
+    "title": "HMN-903 Tôi đã thuê một người bạn cùng lớp cũ, người mà tôi từng thầm yêu, đang ngập trong nợ nần, nên tôi đã thuê một cô gái trông giống hệt cô ấy hồi đó làm người hầu gái nô lệ tình dục... - Suzu no Ie Rin",
+    "description": "Yoshimura, một học sinh ảm đạm và không được ưa chuộng, giờ đã độc thân và có cuộc sống khá giả. Một ngày nọ, anh nhận được cuộc gọi từ Satomi, một người b",
+    "poster": "https://fourhoi.com/hmn-903/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hmn-903",
+    "video_sources": [
+      "blob:https://missav.ws/aacaec1b-231c-4014-be93-8762debd7296",
+      "blob:https://missav.ws/d120ccdd-cae2-4c72-b2e4-13600a7ee097"
+    ],
+    "script_hls": [],
+    "code": "HMN-903",
+    "url": "https://missav.ws/vi/hmn-903",
+    "listing_title": "Tôi đã thuê một người bạn cùng lớp cũ, người mà tôi từng thầm yêu, đang ngập trong nợ nần, nên tôi đã thuê một cô gái trông giống hệt cô ấy hồi đó làm người hầu gái nô lệ tình dục...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "本中",
+    "actors": "",
+    "genres": "người giúp việc, ngực to, công việc đơn lẻ, Kịch, bánh kem, paizuri, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/53147e07-5cc7-4582-94f5-2c0778086871/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/53147e07-5cc7-4582-94f5-2c0778086871/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:55"
+  },
+  "https://missav.ws/vi/hmn-901": {
+    "title": "HMN-901 Phải chăng cô ấy quyết định trở thành diễn viên phim người lớn vì lời tiên đoán của một thầy bói!? Ria Kuroki, một cựu vũ công ba lê từng tham gia các cuộc thi ba lê đẳng cấp thế g...",
+    "description": "Một nữ sinh viên đại học quyết định bước chân vào ngành công nghiệp phim người lớn vì một lý do chưa từng có: một thầy bói nói với cô rằng cô nên trở thành",
+    "poster": "https://fourhoi.com/hmn-901/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hmn-901",
+    "video_sources": [
+      "blob:https://missav.ws/043f4cc0-0523-4f96-a3bc-15906e455ede"
+    ],
+    "script_hls": [],
+    "code": "HMN-901",
+    "url": "https://missav.ws/vi/hmn-901",
+    "listing_title": "Phải chăng cô ấy quyết định trở thành diễn viên phim người lớn vì lời tiên đoán của một thầy bói!? Ria Kuroki, một cựu vũ công ba lê từng tham gia các cuộc thi ba lê đẳng cấp thế g...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "本中",
+    "actors": "",
+    "genres": "trông giống nhau, áo lót, công việc đơn lẻ, bánh kem, đồ chơi, tác phẩm đầu tay, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/180356637/master/180356637_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-24/180356637/180356637_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-33/177018773/177018773_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/d76082fe-1e1e-4d5a-9406-21d7c4d15d09/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/d76082fe-1e1e-4d5a-9406-21d7c4d15d09/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:44:59"
+  },
+  "https://missav.ws/vi/hjmo-741": {
+    "title": "HJMO-741 Thua cuộc trong trò chơi soi gương tàn nhẫn này sẽ dẫn đến những hình phạt khiêu dâm: những người vợ trẻ ngây thơ với dương vật to lớn, chưa từng trải nghiệm điều gì như vậy, bị ép...",
+    "description": "Lần này, chúng tôi tiếp cận bốn cặp đôi có vẻ hạnh phúc, yêu thương nhau và mời họ đến Ngôi nhà Gương đầy thử thách của chúng tôi để kiếm thêm tiền. Một cô",
+    "poster": "https://fourhoi.com/hjmo-741/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hjmo-741",
+    "video_sources": [
+      "blob:https://missav.ws/c3047a75-c0ec-4614-a680-d72f02742194"
+    ],
+    "script_hls": [],
+    "code": "HJMO-741",
+    "url": "https://missav.ws/vi/hjmo-741",
+    "listing_title": "Thua cuộc trong trò chơi soi gương tàn nhẫn này sẽ dẫn đến những hình phạt khiêu dâm: những người vợ trẻ ngây thơ với dương vật to lớn, chưa từng trải nghiệm điều gì như vậy, bị ép...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "はじめ企画",
+    "actors": "",
+    "genres": "Nỗi tủi nhục, Phụ nữ đã lập gia đình/Bà nội trợ, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, Tinh ranh lớn / Tinh ranh lớn, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/fa8b644c-125a-4f1d-bb96-0b9956f95c5e/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/fa8b644c-125a-4f1d-bb96-0b9956f95c5e/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:04"
+  },
+  "https://missav.ws/vi/hjmo-739": {
+    "title": "HJMO-739 Cô ấy có thể đoán được dương vật nào thuộc về bạn trai mình!? Hãy chọn một trong số các dương vật và liếm dương vật cho anh ta! Nếu cô ấy chọn sai, cô ấy sẽ bị xuất tinh vào trong...",
+    "description": "Ba cặp đôi yêu nhau tham gia một thử thách, trong đó họ phải nhận diện dương vật của người yêu mình trong một hàng dương vật dựa trên kích thước, màu sắc, ",
+    "poster": "https://fourhoi.com/hjmo-739/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hjmo-739",
+    "video_sources": [
+      "blob:https://missav.ws/a4b3fd58-c598-4241-a278-418de92d772f"
+    ],
+    "script_hls": [],
+    "code": "HJMO-739",
+    "url": "https://missav.ws/vi/hjmo-739",
+    "listing_title": "Cô ấy có thể đoán được dương vật nào thuộc về bạn trai mình!? Hãy chọn một trong số các dương vật và liếm dương vật cho anh ta! Nếu cô ấy chọn sai, cô ấy sẽ bị xuất tinh vào trong...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "はじめ企画",
+    "actors": "",
+    "genres": "nghiệp dư, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, thổi kèn, Tinh ranh lớn / Tinh ranh lớn, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/45c2b8af-1f5d-41c2-b534-6953dc7c2dab/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/45c2b8af-1f5d-41c2-b534-6953dc7c2dab/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:08"
+  },
+  "https://missav.ws/vi/hjmo-735": {
+    "title": "HJMO-735 Cuộc thi sức chịu đựng xuất tinh với quần bó sát mông to! Vượt qua giới hạn sẽ dẫn đến cực khoái đỏ mặt, ướt át và bùng nổ. Nếu thua, âm đạo của bạn sẽ bị phơi bày và bạn sẽ mang t...",
+    "description": "Mặc những chiếc quần legging bó sát để lộ vùng kín, họ giữ những tư thế đầy xấu hổ! Nếu họ chịu đựng được sự kích thích của máy rung nhắm vào âm vật và các",
+    "poster": "https://fourhoi.com/hjmo-735/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hjmo-735",
+    "video_sources": [
+      "blob:https://missav.ws/90d49533-b0a8-487a-86cb-c7484fdd6024"
+    ],
+    "script_hls": [],
+    "code": "HJMO-735",
+    "url": "https://missav.ws/vi/hjmo-735",
+    "listing_title": "Cuộc thi sức chịu đựng xuất tinh với quần bó sát mông to! Vượt qua giới hạn sẽ dẫn đến cực khoái đỏ mặt, ướt át và bùng nổ. Nếu thua, âm đạo của bạn sẽ bị phơi bày và bạn sẽ mang t...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "はじめ企画",
+    "actors": "",
+    "genres": "tôn sùng mông, Hệ thống khó chịu/cứng, Đi tiểu / rò rỉ, bắn tinh, hi-vision, Loại trừ, đạt cực khoái",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/f296f764-ccdb-4e6a-98c4-a7e415bb3853/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/f296f764-ccdb-4e6a-98c4-a7e415bb3853/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:14"
+  },
+  "https://missav.ws/vi/hjbb-244": {
+    "title": "HJBB-244 \"Dù em có bạn trai...\" Một nữ sinh mặc đồng phục bị một lão già biến thái lừa dối, người đầy dịch cơ thể hắn, và tè dầm trong lúc đạt cực khoái trong cảnh quan hệ ngoại tình.",
+    "description": "Một nữ sinh mặc đồng phục, có bạn trai, bị dụ dỗ vào một nhà chứa đầy trò chơi đồi trụy bởi một lời mời đáng ngờ và bị ép buộc quan hệ tình dục! Quá sức ch",
+    "poster": "https://fourhoi.com/hjbb-244/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/hjbb-244",
+    "video_sources": [
+      "blob:https://missav.ws/48b9e3c9-cd1c-4316-9f6d-60846177d451"
+    ],
+    "script_hls": [],
+    "code": "HJBB-244",
+    "url": "https://missav.ws/vi/hjbb-244",
+    "listing_title": "\"Dù em có bạn trai...\" Một nữ sinh mặc đồng phục bị một lão già biến thái lừa dối, người đầy dịch cơ thể hắn, và tè dầm trong lúc đạt cực khoái trong cảnh quan hệ ngoại tình.",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "はじめ企画",
+    "actors": "",
+    "genres": "Nỗi tủi nhục, đồng phục, nữ sinh, Bị cắm sừng / Bị cắm sừng / NTR, Đi tiểu / rò rỉ, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/79021cb9-eb1b-45eb-bca4-34f4e8e67c0e/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/79021cb9-eb1b-45eb-bca4-34f4e8e67c0e/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:18"
+  },
+  "https://missav.ws/vi/fpre-245": {
+    "title": "FPRE-245 Bị cấp dưới của chồng ra lệnh tạo dáng khêu gợi, khiêu dâm với hậu môn lộ hoàn toàn... -Một người vợ xinh đẹp ở độ tuổi sung sức bị lợi dụng- Aoi Ebisaki - Ao Ebisaki",
+    "description": "",
+    "poster": "https://fourhoi.com/fpre-245/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/fpre-245",
+    "video_sources": [
+      "blob:https://missav.ws/f5497ca1-9b9b-4652-b678-65eb0be1fc02",
+      "blob:https://missav.ws/fa709532-eef4-4ab6-81cd-6b49ea258fc5"
+    ],
+    "script_hls": [],
+    "code": "FPRE-245",
+    "url": "https://missav.ws/vi/fpre-245",
+    "listing_title": "Bị cấp dưới của chồng ra lệnh tạo dáng khêu gợi, khiêu dâm với hậu môn lộ hoàn toàn... -Một người vợ xinh đẹp ở độ tuổi sung sức bị lợi dụng- Aoi Ebisaki",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "Fitch",
+    "actors": "",
+    "genres": "Nỗi tủi nhục, ngực to, tôn sùng mông, công việc đơn lẻ, bánh kem, 3P/4P, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/29407eb3-8833-4c42-a4cc-9c375e70d842/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/29407eb3-8833-4c42-a4cc-9c375e70d842/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:26"
+  },
+  "https://missav.ws/vi/eyan-221": {
+    "title": "EYAN-221 Đừng chạm vào tôi, đừng liếm tôi, đừng xâm phạm tôi... Cơn ác mộng của một người phụ nữ đã kết hôn, người phải chịu đựng sự quấy rối tình dục ghê tởm từ cha dượng và bị ép buộc qua... - Maron-Natsuhana",
+    "description": "Bất lực trước những ham muốn tình dục bệnh hoạn của một kẻ biến thái... Đó là một kỳ nghỉ cuối tuần dài. Maron đang rất mong chờ được đến thăm gia đình chồ",
+    "poster": "https://fourhoi.com/eyan-221/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/eyan-221",
+    "video_sources": [
+      "blob:https://missav.ws/52792eee-f6a5-4aae-9b93-6e961c5014c5"
+    ],
+    "script_hls": [],
+    "code": "EYAN-221",
+    "url": "https://missav.ws/vi/eyan-221",
+    "listing_title": "Đừng chạm vào tôi, đừng liếm tôi, đừng xâm phạm tôi... Cơn ác mộng của một người phụ nữ đã kết hôn, người phải chịu đựng sự quấy rối tình dục ghê tởm từ cha dượng và bị ép buộc qua...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "chị, Phụ nữ đã lập gia đình/Bà nội trợ, ngực to, công việc đơn lẻ, bánh kem, thổi kèn, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/5c2d9828-4480-45ef-9093-a5a7bbb5d1f2/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/5c2d9828-4480-45ef-9093-a5a7bbb5d1f2/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:29"
+  },
+  "https://missav.ws/vi/ebwh-369": {
+    "title": "EBWH-369 Kích thước vòng một được giấu kín gây xôn xao trên mạng xã hội! Người mẫu hàng đầu thế giới!? Khi cởi đồ, cô ấy để lộ vòng một cỡ J (100cm) mềm mại và đầy đặn, và ra mắt với khuôn...",
+    "description": "Một người mẫu nổi tiếng tại các salon, sở hữu sức hút mạnh mẽ trên mạng xã hội, đã bất ngờ ra mắt phim người lớn với điều kiện khuôn mặt của cô không được ",
+    "poster": "https://fourhoi.com/ebwh-369/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-369",
+    "video_sources": [
+      "blob:https://missav.ws/8132171f-9a72-4fb7-b5d7-473495e5ae88"
+    ],
+    "script_hls": [],
+    "code": "EBWH-369",
+    "url": "https://missav.ws/vi/ebwh-369",
+    "listing_title": "Kích thước vòng một được giấu kín gây xôn xao trên mạng xã hội! Người mẫu hàng đầu thế giới!? Khi cởi đồ, cô ấy để lộ vòng một cỡ J (100cm) mềm mại và đầy đặn, và ra mắt với khuôn...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "ngực to, Thần tượng/Người giải trí, paizuri, tác phẩm đầu tay, hi-vision, Loại trừ, mặt nạ, mặt nạ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/177018773/master/177018773_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/04a81ed8-c23a-4f97-9e09-a9db19f790cc/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/04a81ed8-c23a-4f97-9e09-a9db19f790cc/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:33"
+  },
+  "https://missav.ws/vi/ebwh-368": {
+    "title": "EBWH-368 \"Hãy đối xử với tôi như thể tôi đang quay phim...\" Một nhân viên bán DVD khiêu dâm (24) với vòng một cỡ H, người luôn thu hút sự chú ý mỗi khi kiểm kê hàng hóa, đã đánh thức bản nă... - Ayuna Uehara",
+    "description": "",
+    "poster": "https://fourhoi.com/ebwh-368/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-368",
+    "video_sources": [
+      "blob:https://missav.ws/969ecbfc-dd6c-4c72-b86b-a2e2aa3778e1"
+    ],
+    "script_hls": [],
+    "code": "EBWH-368",
+    "url": "https://missav.ws/vi/ebwh-368",
+    "listing_title": "\"Hãy đối xử với tôi như thể tôi đang quay phim...\" Một nhân viên bán DVD khiêu dâm (24) với vòng một cỡ H, người luôn thu hút sự chú ý mỗi khi kiểm kê hàng hóa, đã đánh thức bản nă...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "ngực to, SM, công việc đơn lẻ, hậu môn, họng sâu, tác phẩm đầu tay, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/547320a3-7d56-4a17-a46f-1f19e01c5436/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/547320a3-7d56-4a17-a46f-1f19e01c5436/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:38"
+  },
+  "https://missav.ws/vi/ebwh-367": {
+    "title": "EBWH-367 \"Tôi muốn anh cưỡng hiếp tôi một cách thô bạo...\" Một cô gái yêu văn chương với những vùng nhạy cảm khắp cơ thể, đang trốn trong một góc của hiệu sách cũ. Một người đẹp da trắng vớ... - Yui Shioka",
+    "description": "Yui Shiori (24) làm việc lặng lẽ tại một hiệu sách cũ ở Jinbocho. Không thích giao tiếp xã hội, cô dành cả ngày đắm chìm trong thế giới sách. Tuy nhiên, đằ",
+    "poster": "https://fourhoi.com/ebwh-367/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-367",
+    "video_sources": [
+      "blob:https://missav.ws/4a7d49a1-4968-42b3-acf7-576382356211"
+    ],
+    "script_hls": [],
+    "code": "EBWH-367",
+    "url": "https://missav.ws/vi/ebwh-367",
+    "listing_title": "\"Tôi muốn anh cưỡng hiếp tôi một cách thô bạo...\" Một cô gái yêu văn chương với những vùng nhạy cảm khắp cơ thể, đang trốn trong một góc của hiệu sách cũ. Một người đẹp da trắng vớ...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "cô gái xinh đẹp, ngực to, SM, công việc đơn lẻ, paizuri, tác phẩm đầu tay, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/64cbf97a-193d-4752-84b5-83a438f28c19/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/64cbf97a-193d-4752-84b5-83a438f28c19/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:42"
+  },
+  "https://missav.ws/vi/ebwh-366": {
+    "title": "EBWH-366 Trong kỳ nghỉ hè về thăm quê, tôi phát hiện em họ Hinako đang lén lút thủ dâm một cách điên cuồng. \"Nếu mẹ hay người thân khác phát hiện ra, tớ sẽ chết mất...\" cô ấy nói, rồi nhẹ n... - Hinako Higashimine",
+    "description": "",
+    "poster": "https://fourhoi.com/ebwh-366/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-366",
+    "video_sources": [
+      "blob:https://missav.ws/7a25facb-e362-44a0-a21f-3e0e5c075d03",
+      "blob:https://missav.ws/c380735f-8474-4140-a400-38dc62e4bbab",
+      "blob:https://missav.ws/7248c1af-c731-4610-95cd-f55061cbf164"
+    ],
+    "script_hls": [],
+    "code": "EBWH-366",
+    "url": "https://missav.ws/vi/ebwh-366",
+    "listing_title": "Trong kỳ nghỉ hè về thăm quê, tôi phát hiện em họ Hinako đang lén lút thủ dâm một cách điên cuồng. \"Nếu mẹ hay người thân khác phát hiện ra, tớ sẽ chết mất...\" cô ấy nói, rồi nhẹ n...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "cô gái xinh đẹp, ngực to, công việc đơn lẻ, chị, paizuri, hi-vision, Loại trừ, onasapo, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/bf30dfb2-9e3c-4cac-87e2-a930cc52ce21/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/bf30dfb2-9e3c-4cac-87e2-a930cc52ce21/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:48"
+  },
+  "https://missav.ws/vi/ebwh-365": {
+    "title": "EBWH-365 Tôi đã hỏi người chị dâu hiền lành và tốt bụng của mình xem liệu chị ấy có cho tôi cho con của chị ấy bú sữa mẹ không... Fumika Kashiwagi",
+    "description": "Trong kỳ nghỉ hè, tôi trông nom bọn trẻ ở nhà anh trai và vợ anh ấy vì cả hai người đều bận rộn làm việc. Vợ anh trai tôi, Fumika, đã đi làm lại sau kỳ ngh",
+    "poster": "https://fourhoi.com/ebwh-365/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-365",
+    "video_sources": [
+      "blob:https://missav.ws/5fd6f4fc-492f-4f1d-96fe-d4266369256b"
+    ],
+    "script_hls": [],
+    "code": "EBWH-365",
+    "url": "https://missav.ws/vi/ebwh-365",
+    "listing_title": "Tôi đã hỏi người chị dâu hiền lành và tốt bụng của mình xem liệu chị ấy có cho tôi cho con của chị ấy bú sữa mẹ không... Fumika Kashiwagi",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "ngực to, công việc đơn lẻ, chị, Kịch, paizuri, sữa mẹ, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/277604207/master/277604207.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/b10b6e5f-459d-4967-87bf-0dc85eb1556b/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/b10b6e5f-459d-4967-87bf-0dc85eb1556b/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:52"
+  },
+  "https://missav.ws/vi/ebwh-363": {
+    "title": "EBWH-363 Một nữ nhân viên dọn dẹp nhà cửa bị quay phim lén lút tại nhà; người phụ nữ ngực khủng không thể nói lời từ chối đã bị cưỡng hiếp và bị xuất tinh vào bên trong. Riri Haruka - Haruka Riri",
+    "description": "Tôi chia sẻ điều này vì người phụ nữ đến dọn dẹp nhà tôi có thân hình cực kỳ quyến rũ. Trước tiên, một vài thông tin sơ lược. Tôi đã sử dụng một dịch vụ dọ",
+    "poster": "https://fourhoi.com/ebwh-363/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-363",
+    "video_sources": [
+      "blob:https://missav.ws/f89c4a5b-fba5-49b8-b92d-c0b82120ef84"
+    ],
+    "script_hls": [],
+    "code": "EBWH-363",
+    "url": "https://missav.ws/vi/ebwh-363",
+    "listing_title": "Một nữ nhân viên dọn dẹp nhà cửa bị quay phim lén lút tại nhà; người phụ nữ ngực khủng không thể nói lời từ chối đã bị cưỡng hiếp và bị xuất tinh vào bên trong. Riri Haruka",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "ngực to, Voyeur/Nhìn Trộm, công việc đơn lẻ, Hệ thống khó chịu/cứng, bánh kem, paizuri, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/2a81f272-992a-429a-8369-244ad6bb4c34/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/2a81f272-992a-429a-8369-244ad6bb4c34/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:45:56"
+  },
+  "https://missav.ws/vi/ebwh-362": {
+    "title": "EBWH-362 Koharu Uno, cô nàng hoạt náo viên dẻo dai với vòng một tự nhiên cỡ G, người đã khiến các thành viên câu lạc bộ phát cuồng.",
+    "description": "Tính cách tươi sáng, vui vẻ và luôn sẵn sàng giúp đỡ người khác khiến cô ấy luôn hết lòng phục vụ bất cứ ai yêu cầu. Từ một hoạt náo viên chuyển sang diễn ",
+    "poster": "https://fourhoi.com/ebwh-362/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-362",
+    "video_sources": [
+      "blob:https://missav.ws/dd089f31-10fc-4514-b9f1-328b909853d3"
+    ],
+    "script_hls": [],
+    "code": "EBWH-362",
+    "url": "https://missav.ws/vi/ebwh-362",
+    "listing_title": "Koharu Uno, cô nàng hoạt náo viên dẻo dai với vòng một tự nhiên cỡ G, người đã khiến các thành viên câu lạc bộ phát cuồng.",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "cô gái xinh đẹp, ngực to, công việc đơn lẻ, thổi kèn, tác phẩm đầu tay, hi-vision, Loại trừ, hoạt náo viên, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/a8089225-b26a-43f5-92aa-71511b36b846/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/a8089225-b26a-43f5-92aa-71511b36b846/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:01"
+  },
+  "https://missav.ws/vi/ebwh-361": {
+    "title": "EBWH-361 Khuôn mặt 65 điểm, thân hình 120 điểm. Tôi sống với bố mẹ và thủ dâm 8 lần một tuần. Một sinh viên đại học (21 tuổi) có sở thích đặc biệt với vòng một cỡ K, đang hướng tới mục tiêu... - Koharu Shiraishi",
+    "description": "Koharu (21), một sinh viên đại học sống cùng gia đình, mơ ước được làm việc tại một phòng khám nha khoa. Nhưng khi cởi bỏ quần áo, thân hình nhỏ nhắn 150cm",
+    "poster": "https://fourhoi.com/ebwh-361/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-361",
+    "video_sources": [
+      "blob:https://missav.ws/113f97ba-d5bc-4d8e-a1e1-a78bcce34b48"
+    ],
+    "script_hls": [],
+    "code": "EBWH-361",
+    "url": "https://missav.ws/vi/ebwh-361",
+    "listing_title": "Khuôn mặt 65 điểm, thân hình 120 điểm. Tôi sống với bố mẹ và thủ dâm 8 lần một tuần. Một sinh viên đại học (21 tuổi) có sở thích đặc biệt với vòng một cỡ K, đang hướng tới mục tiêu...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "ngực to, SM, công việc đơn lẻ, paizuri, tác phẩm đầu tay, siêu sữa, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/cbdbd02b-1bf2-4064-bc70-c6f3a97a2cf5/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/cbdbd02b-1bf2-4064-bc70-c6f3a97a2cf5/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:07"
+  },
+  "https://missav.ws/vi/ebwh-352": {
+    "title": "EBWH-352 Xếp hàng với \"của quý\" lộ ra! Các thầy cô sẽ đóng vai gái điếm trong bộ đồ bơi gợi cảm. (Kiyomiya Jinai, Momota Mitsuki) - Mitsuki Momota",
+    "description": "Nội quy trường mới của tôi thật kinh khủng: \"Hoạt động câu lạc bộ là bắt buộc!\" Rồi tôi nghe đồn... câu lạc bộ bơi lội chỉ là hình thức và người hướng dẫn ",
+    "poster": "https://fourhoi.com/ebwh-352/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/ebwh-352",
+    "video_sources": [
+      "blob:https://missav.ws/cd189d9c-3265-446f-9168-46cf198e517a"
+    ],
+    "script_hls": [],
+    "code": "EBWH-352",
+    "url": "https://missav.ws/vi/ebwh-352",
+    "listing_title": "Xếp hàng với \"của quý\" lộ ra! Các thầy cô sẽ đóng vai gái điếm trong bộ đồ bơi gợi cảm. (Kiyomiya Jinai, Momota Mitsuki)",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "E-BODY",
+    "actors": "",
+    "genres": "giáo viên nữ, ngực to, cao, Cuộc đua bơi lội / áo tắm của trường, cao bồi, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/77e7ac15-2b16-4704-842b-c9eee6e272ed/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/77e7ac15-2b16-4704-842b-c9eee6e272ed/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:12"
+  },
+  "https://missav.ws/vi/dvmm-445": {
+    "title": "DVMM-445 [4K] Quan hệ tình dục tức thì với một cô giúp việc nhà da trắng, mông to! Người phụ nữ đã kết hôn, người đã nghiện \"cậu nhỏ\" to của tôi, xuất hiện bất ngờ vào ngày hôm sau, vì vậy... - Tenma Yui",
+    "description": "",
+    "poster": "https://fourhoi.com/dvmm-445/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/dvmm-445",
+    "video_sources": [
+      "blob:https://missav.ws/b1847fe5-e2e0-40b5-b57a-68847f2caddb"
+    ],
+    "script_hls": [],
+    "code": "DVMM-445",
+    "url": "https://missav.ws/vi/dvmm-445",
+    "listing_title": "[4K] Quan hệ tình dục tức thì với một cô giúp việc nhà da trắng, mông to! Người phụ nữ đã kết hôn, người đã nghiện \"cậu nhỏ\" to của tôi, xuất hiện bất ngờ vào ngày hôm sau, vì vậy...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "DEEP'S",
+    "actors": "",
+    "genres": "Phụ nữ đã lập gia đình/Bà nội trợ, mông to, công việc đơn lẻ, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, Tinh ranh lớn / Tinh ranh lớn, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/becc4f2b-73f3-4e91-b0f0-ca2e75ad24b0/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/becc4f2b-73f3-4e91-b0f0-ca2e75ad24b0/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:16"
+  },
+  "https://missav.ws/vi/dvmm-444": {
+    "title": "DVMM-444 [4K] Một người vợ đến ngay lập tức khi bạn gọi, một con búp bê tình dục đầy tinh dịch. Khi tôi ham muốn, tôi giải tỏa bằng âm đạo của bà nội trợ ngực bự, mông bự sống ở phòng bên c... - Yuri Oshikawa",
+    "description": "Vợ của hàng xóm tôi hoàn hảo về mọi mặt: ngực to, mông to, thân hình quyến rũ, nhạy cảm, gợi cảm và ngoan ngoãn. Cô ấy đạt điểm 120/100. Ngay cả khi ở nhà ",
+    "poster": "https://fourhoi.com/dvmm-444/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/dvmm-444",
+    "video_sources": [
+      "blob:https://missav.ws/ec0d597a-6c18-41f7-a553-ed2c6ab1e77d",
+      "blob:https://missav.ws/eb5fa3ce-d933-46af-8630-9c286db3a8b0"
+    ],
+    "script_hls": [],
+    "code": "DVMM-444",
+    "url": "https://missav.ws/vi/dvmm-444",
+    "listing_title": "[4K] Một người vợ đến ngay lập tức khi bạn gọi, một con búp bê tình dục đầy tinh dịch. Khi tôi ham muốn, tôi giải tỏa bằng âm đạo của bà nội trợ ngực bự, mông bự sống ở phòng bên c...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "DEEP'S",
+    "actors": "",
+    "genres": "Phụ nữ đã lập gia đình/Bà nội trợ, ngực to, mông to, công việc đơn lẻ, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, hi-vision, Loại trừ, 4K",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/d266e87c-ba29-4b93-9b77-9c1760c79ba2/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/d266e87c-ba29-4b93-9b77-9c1760c79ba2/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:19"
+  },
+  "https://missav.ws/vi/dvmm-443": {
+    "title": "DVMM-443 Cảnh quay AV dành cho nam và nữ: Chỉ dành cho cỡ H trở lên. Ba nữ sinh viên đại học thân thiết cùng nhau nhấp một ngụm sữa → xoa bóp bộ ngực khủng của mình → nhào nặn núm vú và cố...",
+    "description": "Chúng tôi tiếp cận một nhóm ba nữ sinh viên đại học thân thiết trên đường phố và mời họ đến một studio được chuẩn bị đặc biệt dưới vỏ bọc một cuộc phỏng vấ",
+    "poster": "https://fourhoi.com/dvmm-443/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/dvmm-443",
+    "video_sources": [
+      "blob:https://missav.ws/389fa8ad-001e-46a8-91fa-61f8ce3981e7"
+    ],
+    "script_hls": [],
+    "code": "DVMM-443",
+    "url": "https://missav.ws/vi/dvmm-443",
+    "listing_title": "Cảnh quay AV dành cho nam và nữ: Chỉ dành cho cỡ H trở lên. Ba nữ sinh viên đại học thân thiết cùng nhau nhấp một ngụm sữa → xoa bóp bộ ngực khủng của mình → nhào nặn núm vú và cố...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "DEEP'S",
+    "actors": "",
+    "genres": "Nữ sinh viên đại học, ngực to, nghiệp dư, bánh kem, 3P/4P, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://surrit.com/79340635-d41c-4b60-95dd-a36597908ea4/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/79340635-d41c-4b60-95dd-a36597908ea4/playlist.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://svacdn77.tsyndicate.com/8CWG2WVDPAwyr73RnpdWcA==,1790581636/media=hlsA/multi=636x360:630x360,442x250:440x250/videos/3/c/d88c12874c77db880eae2470bb32fb079d9c12/630x360.mp4.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:22"
+  },
+  "https://missav.ws/vi/dvmm-442": {
+    "title": "DVMM-442 Cảnh nóng giữa nam và nữ: Phía bên kia tấm gương thần kỳ là bạn trai (=bạn thân) của cô ấy! BSS (Tôi thích anh ấy trước...) Ở một mình trong phòng với người bạn thời thơ ấu, người...",
+    "description": "Những năm gần đây, số lượng nam thanh niên trở nên thụ động và nhút nhát trong các mối quan hệ đang gia tăng! Dự án này được thực hiện bởi một nam sinh viê",
+    "poster": "https://fourhoi.com/dvmm-442/cover-n.jpg",
+    "canonical": "https://missav.ws/vi/dvmm-442",
+    "video_sources": [
+      "blob:https://missav.ws/c538e40d-03df-4bc3-92f0-3cbf5a05e505"
+    ],
+    "script_hls": [],
+    "code": "DVMM-442",
+    "url": "https://missav.ws/vi/dvmm-442",
+    "listing_title": "Cảnh nóng giữa nam và nữ: Phía bên kia tấm gương thần kỳ là bạn trai (=bạn thân) của cô ấy! BSS (Tôi thích anh ấy trước...) Ở một mình trong phòng với người bạn thời thơ ấu, người...",
+    "release_date": "2026-09-11",
+    "duration": "",
+    "studio": "DEEP'S",
+    "actors": "",
+    "genres": "bạn thời thơ ấu, Trinh nữ, nghiệp dư, Bị cắm sừng / Bị cắm sừng / NTR, bánh kem, hi-vision, Loại trừ",
+    "json_ld": [],
+    "streams_1080": [],
+    "hls_inspection": [
+      {
+        "url": "https://edge-hls.growcdnssedge.com/hls/222318250/master/222318250_240p.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://media-hls.growcdnssedge.com/b-hls-16/222318250/222318250_240p.m3u8?playlistType=standard&preferredVideoCodec=h264",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/ffdbf968-d3e1-4edc-b398-5f02b6fd3dcc/720p/video.m3u8",
+        "master_1080_variants": 0
+      },
+      {
+        "url": "https://surrit.com/ffdbf968-d3e1-4edc-b398-5f02b6fd3dcc/playlist.m3u8",
+        "master_1080_variants": 0
+      }
+    ],
+    "status": "no_verified_1080",
+    "scanned_at": "2026-09-28T14:46:26"
+  }
+}
