@@ -49,7 +49,24 @@ function filmMeta(f){
 const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
 const ikisodaMovies=()=>getIkisodaCatalog().then(c=>c.movies||[]);
 function ikisodaMetaFor(x){const d=String(x.release||'');const meta={id:x.id,type:'movie',name:x.name||x.code||x.id,poster:x.poster||undefined,posterShape:'poster',releaseInfo:d?d.slice(0,4):undefined,released:d?new Date(d+'T00:00:00.000Z').toISOString():undefined,genres:x.genres||[],genre:x.genres||[],description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined));}
-function ikisodaStreamFor(x){return [{name:'IkiSoda 1080p · CDN DIRECT',title:'1080p · verified HTTP 206 video/mp4',url:x.url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];}
+async function freshIkiSodaUrl(x){
+ const page=x.source_page;
+ const getFile=x.get_file_1080;
+ if(!page||!getFile)return null;
+ try{
+  const r=await fetch(getFile+(getFile.includes('?')?'&':'?')+'rnd='+Date.now(),{headers:{'User-Agent':'Mozilla/5.0','Referer':page,'Origin':'https://ikisoda.com','Range':'bytes=0-1'},redirect:'manual',signal:AbortSignal.timeout(10000)});
+  const loc=r.headers.get('location');
+  if((r.status===301||r.status===302||r.status===303||r.status===307||r.status===308)&&loc)return new URL(loc,getFile).toString();
+  if(r.status===200||r.status===206)return getFile;
+ }catch(e){console.error('[IKISODA_FRESH]',x.code,e.message);}
+ return null;
+}
+async function ikisodaStreamFor(x){
+ const fresh=await freshIkiSodaUrl(x);
+ const url=fresh||x.url;
+ if(!url)return [];
+ return [{name:fresh?'IkiSoda 1080p · FRESH DIRECT':'IkiSoda 1080p · cached fallback',title:fresh?'1080p · signed on Play':'1080p · stored signed URL',url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:x.source_page||'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];
+}
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
  try{
@@ -264,7 +281,7 @@ if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json'){const xs=await ikisodaMovies();return json(res,{metas:xs.map(ikisodaMetaFor)});}
 if(path.startsWith('/meta/movie/ikisoda:')&&path.endsWith('.json')){const key=path.slice('/meta/movie/'.length,-5);const x=(await ikisodaMovies()).find(v=>v.id===key);return x?json(res,{meta:ikisodaMetaFor(x)}):json(res,{error:'Not found'},404);}
-if(path.startsWith('/stream/movie/ikisoda:')&&path.endsWith('.json')){const key=path.slice('/stream/movie/'.length,-5);const x=(await ikisodaMovies()).find(v=>v.id===key);return x?json(res,{streams:ikisodaStreamFor(x)}):json(res,{streams:[]});}
+if(path.startsWith('/stream/movie/ikisoda:')&&path.endsWith('.json')){const key=path.slice('/stream/movie/'.length,-5);const x=(await ikisodaMovies()).find(v=>v.id===key);return x?json(res,{streams:await ikisodaStreamFor(x)}):json(res,{streams:[]});}
 if(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
 
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
