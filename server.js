@@ -53,44 +53,36 @@ function streamMediaId(u){
  const m=String(u||'').match(/\/(\d+)\/\1_1080p\.mp4/i);
  return m?.[1]||null;
 }
-function calcKvsSeed(licenseCode,hashRange=16){
- const a=String(licenseCode||'').split('');
- const f=a.filter(ch=>ch!=='$').map(ch=>ch==='0'?'1':ch).join('');
- const j=Math.floor(f.length/2), k=parseInt(f.slice(0,j+1),10), l=parseInt(f.slice(j),10);
- if(!Number.isFinite(k)||!Number.isFinite(l))return null;
- const fs=String(Math.abs(l-k)*4).split('');
- const mod=Math.floor(hashRange/2)+2; let out='';
- for(let g=0;g<j+1;g++)for(let h=1;h<=4;h++){
-  const av=parseInt(a[g+h],10), fv=parseInt(fs[g],10);
-  if(!Number.isFinite(av)||!Number.isFinite(fv))return null;
-  let n=av+fv;if(n>=mod)n-=mod;out+=String(n);
- }
+function kvsLicenseToken(licenseCode){
+ const raw=String(licenseCode||'').replaceAll('$','');
+ if(!/^\d+$/.test(raw))return null;
+ const vals=[...raw].map(Number), mod=raw.replaceAll('0','1'), center=Math.floor(mod.length/2);
+ let seed=String(4*Math.abs(Number(mod.slice(0,center+1))-Number(mod.slice(center)))).slice(0,center+1);
+ const out=[];
+ for(let i=0;i<seed.length;i++)for(let off=0;off<4;off++)out.push((vals[i+off]+Number(seed[i]))%10);
  return out;
 }
-function decryptKvsUrl(videoUrl,licenseCode,hashRange=16){
+function decryptKvsUrl(videoUrl,licenseCode){
  try{
-  const parts=String(videoUrl||'').split('/');
-  if(parts.length<8)return null;
-  let hash=parts[7].slice(0,2*hashRange), tail=parts[7].slice(2*hashRange);
-  const seed=calcKvsSeed(licenseCode,hashRange);if(!seed||!hash)return null;
-  for(let k=hash.length-1;k>=0;k--){
-   const a=hash.split('');let l=k;
-   for(let m=k;m<seed.length;m++)l+=parseInt(seed[m],10);
-   while(l>=a.length)l-=a.length;
-   [a[k],a[l]]=[a[l],a[k]];hash=a.join('');
-  }
-  parts[7]=hash+tail;return parts.slice(0,2).join('/')+'//'+parts.slice(2).join('/');
+  if(!String(videoUrl).startsWith('function/0/'))return videoUrl;
+  const raw=String(videoUrl).slice('function/0/'.length), u=new URL(raw), parts=u.pathname.split('/');
+  const token=kvsLicenseToken(licenseCode); if(!token||parts.length<5)return null;
+  const hash=parts[3].slice(0,32), tail=parts[3].slice(32), idx=[...Array(32).keys()];
+  let accum=0;
+  for(let src=31;src>=0;src--){accum+=token[src];const dest=(src+accum)%32;[idx[src],idx[dest]]=[idx[dest],idx[src]];}
+  parts[3]=idx.map(i=>hash[i]).join('')+tail;u.pathname=parts.join('/');return u.toString();
  }catch{return null;}
 }
 function extractIkiGetFiles(html){
  const decoded=String(html||'').replaceAll('\\/','/').replaceAll('&amp;','&').replaceAll('\\u0026','&');
  const out=[...decoded.matchAll(/https?:\/\/ikisoda\.com\/get_file\/[^"'<>\\s]+_1080p\.mp4\/?(?:\?[^"'<>\\s]*)?/gi)].map(m=>m[0]);
- const license=(decoded.match(/license_code\s*:\s*['"]([^'"]+)/i)||[])[1];
- const vars=[...decoded.matchAll(/video_url\s*[:=]\s*['"]([^'"]+)/gi)].map(m=>m[1]);
- for(const v of vars){
-  let u=v;
-  if(v.startsWith('function')&&license)u=decryptKvsUrl(v,license,16);
-  if(u&&/_1080p\.mp4/i.test(u))out.unshift(u);
+ const flash=(decoded.match(/var\s+flashvars\s*=\s*\{([\s\S]*?)\};/i)||[])[1]||decoded;
+ const license=(flash.match(/license_code\s*:\s*['"]([^'"]+)/i)||[])[1];
+ const vars=[...flash.matchAll(/(video_(?:url|alt_url\d*))\s*:\s*['"]([^'"]+)/gi)];
+ for(const m of vars){
+  const key=m[1], raw=m[2], label=(flash.match(new RegExp(key+'_text\\\\s*:\\\\s*[\\\'"]([^\\\'"]+)','i'))||[])[1]||'';
+  const u=decryptKvsUrl(raw,license);
+  if(u&&(/1080/i.test(label)||/_1080p\.mp4/i.test(u)))out.unshift(u);
  }
  return [...new Set(out)];
 }
