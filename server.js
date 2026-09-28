@@ -4,8 +4,13 @@ const rawScan = JSON.parse([1,2,3,4,5].map(n=>readFileSync(new URL('./data/sourc
 const verified = Object.values(rawScan).filter(f=>f.status==='ok_1080' && Array.isArray(f.streams_1080) && f.streams_1080.some(s=>s.quality==='1080p' && s.verification==='master_resolution_1080' && s.url?.startsWith('https://surrit.com/') && s.url.endsWith('/1080p/video.m3u8')));
 const filmById = new Map(verified.map(f=>['missav:'+f.code.toLowerCase(),f]));
 function filmMeta(f){return {id:'missav:'+f.code.toLowerCase(),type:'movie',name:f.title||f.code,poster:f.poster||undefined,posterShape:'poster',description:f.description||'',releaseInfo:f.release_date||undefined,genres:(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean),links:f.url?[{name:'Source',category:'source',url:f.url}]:[]};}
-const publicManifest={id:'community.missav.hls.test',version:'0.2.1',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
-function publicStream(f){const code=f.code.toLowerCase();return [{name:'MissAV · 1080p proxy',title:'1080p · Referer handled by server',url:(ROOT || 'https://missav-uimx.onrender.com')+'/play/'+encodeURIComponent(code)+'/1080p/video.m3u8',behaviorHints:{notWebReady:true}}];}
+const publicManifest={id:'community.missav.hls.test',version:'0.2.2',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
+function publicStream(f){
+ const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');
+ const u=new URL(source.url);
+ const mirror='https://surrit.mrstcdn.store'+u.pathname+u.search;
+ return [{name:'Mirror 1080p · DIRECT · no Render bandwidth',title:'1080p · same successful test path',url:mirror,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'}}}}];
+}
 async function filmProxy(req,res,path){
  const match=path.match(new RegExp('^/play/([a-z0-9-]+)/(.+)$','i'));
  if(!match)return json(res,{error:'Invalid stream path'},400);
