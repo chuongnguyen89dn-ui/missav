@@ -3,13 +3,13 @@ import {readFileSync} from 'node:fs';
 const verified = JSON.parse(readFileSync(new URL('./data/catalog-verified.json',import.meta.url),'utf8'));
 const verifiedMetadata = JSON.parse(readFileSync(new URL('./data/metadata-verified-nuvio.json',import.meta.url),'utf8'));
 const rawScan = Object.fromEntries(verified.map(f=>[f.url,f]));
-const IKISODA_CATALOG_URL='https://raw.githubusercontent.com/chuongnguyen89dn-ui/missav/main/data/ikisoda-catalog.json';
+const IKISODA_CATALOG_URL='https://raw.githubusercontent.com/chuongnguyen89dn-ui/missav/ikisoda-data/data/ikisoda-catalog.json';
 let ikisodaCache={data:JSON.parse(readFileSync(new URL('./data/ikisoda-catalog.json',import.meta.url),'utf8')),at:0};
 async function getIkisodaCatalog(){
  const now=Date.now();
  if(now-ikisodaCache.at<15000)return ikisodaCache.data;
  try{
-  const r=await fetch(IKISODA_CATALOG_URL,{headers:{'User-Agent':'missav-nuvio-addon','Cache-Control':'no-cache'},signal:AbortSignal.timeout(8000)});
+  const u=IKISODA_CATALOG_URL+'?v='+Math.floor(now/15000); const r=await fetch(u,{headers:{'User-Agent':'missav-nuvio-addon','Cache-Control':'no-cache'},signal:AbortSignal.timeout(8000)});
   if(r.ok){ikisodaCache={data:await r.json(),at:now};return ikisodaCache.data;}
  }catch(e){console.error('[IKISODA_CATALOG]',e.message);}
  ikisodaCache.at=now;return ikisodaCache.data;
@@ -48,7 +48,7 @@ function filmMeta(f){
 }
 const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
 const ikisodaMovies=()=>getIkisodaCatalog().then(c=>c.movies||[]);
-function ikisodaMetaFor(x){return {id:x.id,type:'movie',name:x.name,poster:x.poster,posterShape:'poster',releaseInfo:x.release.slice(0,4),released:new Date(x.release+'T00:00:00.000Z').toISOString(),genres:x.genres,genre:x.genres,description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};}
+function ikisodaMetaFor(x){const d=String(x.release||'');const meta={id:x.id,type:'movie',name:x.name||x.code||x.id,poster:x.poster||undefined,posterShape:'poster',releaseInfo:d?d.slice(0,4):undefined,released:d?new Date(d+'T00:00:00.000Z').toISOString():undefined,genres:x.genres||[],genre:x.genres||[],description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined));}
 function ikisodaStreamFor(x){return [{name:'IkiSoda 1080p · CDN DIRECT',title:'1080p · verified HTTP 206 video/mp4',url:x.url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];}
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
