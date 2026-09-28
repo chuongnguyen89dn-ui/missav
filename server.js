@@ -109,8 +109,10 @@ async function freshIkiSodaUrl(x){
     diag.push({status:r.status,location:!!loc,rnd:new URL(candidate).searchParams.get('rnd')||null});
     if([301,302,303,307,308].includes(r.status)&&loc){
      const signed=new URL(loc,candidate).toString();
-     if(!expected||streamMediaId(signed)===expected){
-      console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,diag,get_file_status:r.status,total_ms:Date.now()-started,result:'fresh_signed'}));
+     let signedId=streamMediaId(signed);
+     if(!signedId){try{const f=new URL(signed).searchParams.get('file')||'';signedId=streamMediaId(decodeURIComponent(f));}catch{}}
+     if(!expected||signedId===expected){
+      console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,diag,get_file_status:r.status,signed_media_id:signedId||null,total_ms:Date.now()-started,result:'fresh_signed'}));
       return signed;
      }
     }
