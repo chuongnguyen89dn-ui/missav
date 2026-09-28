@@ -1,3 +1,11 @@
+
+import {readFileSync} from 'node:fs';
+const rawScan = JSON.parse([1,2,3,4,5].map(n=>readFileSync(new URL('./data/source-part-'+String(n).padStart(2,'0')+'.txt',import.meta.url),'utf8')).join('\\n'));
+const verified = Object.values(rawScan).filter(f=>f.status==='ok_1080' && Array.isArray(f.streams_1080) && f.streams_1080.some(s=>s.quality==='1080p' && s.verification==='master_resolution_1080' && /^https:\\/\\/surrit\\.com\\/.+\\/1080p\\/video\\.m3u8$/.test(s.url)));
+const filmById = new Map(verified.map(f=>['missav:'+f.code.toLowerCase(),f]));
+function filmMeta(f){return {id:'missav:'+f.code.toLowerCase(),type:'movie',name:f.title||f.code,poster:f.poster||undefined,posterShape:'poster',description:f.description||'',releaseInfo:f.release_date||undefined,genres:(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean),links:f.url?[{name:'Source',category:'source',url:f.url}]:[]};}
+const publicManifest={id:'community.missav.hls.test',version:'0.2.0',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
+function publicStream(f){const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');return [{name:'MissAV · 1080p',title:'1080p · verified master playlist',url:source.url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://missav.ws/',Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'}}}}];}
 import http from 'node:http';
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = process.env.PUBLIC_URL?.replace(/\/$/, '') || '';
@@ -128,13 +136,17 @@ async function diagnoseMirrorSegments(req,res){
 }
 http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
 if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
-if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',source:'Surrit direct test, no video proxy'});
+if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',verified:verified.length,source:'Verified 1080p catalog; direct headers'});
 if(path==='/diagnose-mirror-segments.json')return diagnoseMirrorSegments(req,res);
 if(path.startsWith('/mirror/'))return mirrorProxy(req,res,path);
 if(path==='/diagnose-mirrors.json')return diagnoseMirrors(req,res);
 if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
-if(path==='/manifest.json')return json(res,manifest);
+if(path==='/manifest.json')return json(res,publicManifest);
+if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
+if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
+if(path.startsWith('/stream/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/stream/movie/'.length,-5));return f?json(res,{streams:publicStream(f)}):json(res,{streams:[]});}
+if(path==='/catalog-status.json')return json(res,{total:Object.keys(rawScan).length,verified:verified.length,excluded:Object.keys(rawScan).length-verified.length});
 if(path==='/catalog/movie/missav-test.json')return json(res,{metas:[meta]});
 if(path==='/meta/movie/'+id+'.json')return json(res,{meta});
 if(path==='/stream/movie/'+id+'.json')return json(res,{streams});
