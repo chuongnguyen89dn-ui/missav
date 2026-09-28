@@ -22,7 +22,8 @@ function filmMeta(f){
  ];
  const meta={
   id:'missav:'+f.code.toLowerCase(),type:'movie',
-  name:m.title||f.title||f.code,
+  // Keep Nuvio hero/poster title compact; long localized title belongs in description/details.
+  name:f.code,
   poster:m.poster||f.poster||undefined,posterShape:'poster',
   description:m.description||f.description||undefined,
   releaseInfo:date?date.slice(0,4):undefined,
