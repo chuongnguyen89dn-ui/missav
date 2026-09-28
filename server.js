@@ -36,10 +36,15 @@ function filmMeta(f){
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
 const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
-const ikisodaId='ikisoda:hsm-061';
-const ikisodaMeta={id:ikisodaId,type:'movie',name:'HSM-061 — IkiSoda 1080p Test',description:'IkiSoda direct 1080p MP4 test'};
-const ikisoda1080='https://ikisoda.com/get_file/18/7d6991d170ace751543cc36b25648b3cee75e9f524/22000/22675/22675_1080p.mp4/';
-const ikisodaStreams=[{name:'IkiSoda 1080p · CDN DIRECT',title:'1080p · verified HTTP 206 video/mp4',url:'https://st11.ikisoda.com/remote_control.php?time=1790593548&cv=a0d4966adf0f54a7c545de5318c9e9f4&lr=0&cv2=88d262b0530c1db5c3e0f0a91ce8113f&file=%2Fvideos%2F22000%2F22675%2F22675_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=df90c96b2d2ba6eb1c232aa56dd31291',behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];
+const ikisodaMovies=[
+ {id:'ikisoda:bazx-390',code:'BAZX-390',name:"[BAZX-390] Misaki Azusa's Big Tits 4HR Busty Romp",poster:'https://ikisoda.com/contents/videos_screenshots/22000/22684/preview.jpg',release:'2024-02-13',duration:'239 Min',studio:'K.M.Produce',genres:['Ngực lớn','Creampie','Beautiful Girl','Female College Student','Subjectivity'],url:'https://st11.ikisoda.com/remote_control.php?time=1790596540&cv=eceee9c8c6e976b9f18c10dae2cc2c6e&lr=0&cv2=e9cf5dd866ba4d747f430bf710d21d61&file=%2Fvideos%2F22000%2F22684%2F22684_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=f3843792bae45d470aa3ff2ddc38ee58'},
+ {id:'ikisoda:blb-016',code:'BLB-016',name:"[BLB-016] Misaki Azusa's Naughty Married 4P With Huge Black Cock",poster:'https://ikisoda.com/contents/videos_screenshots/22000/22500/preview.jpg',release:'2022-03-22',duration:'120 Min',studio:'Global Media Entertainment',genres:['Featured Actress','Married Woman','Drama'],url:'https://st11.ikisoda.com/remote_control.php?time=1790596577&cv=2ec95462050f2dbb10da6e84364c7307&lr=0&cv2=fbd3f43cd2135bce52ee7ac9556c7c0d&file=%2Fvideos%2F22000%2F22500%2F22500_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=844a0cad8b38164b5730799fd7413bc1'},
+ {id:'ikisoda:rebd-816',code:'REBD-816',name:"[REBD-816] Kuno Hinano's AV Image And Teasing Play",poster:'https://ikisoda.com/contents/videos_screenshots/22000/22639/preview.jpg',release:'2024-02-08',duration:'75 Min',studio:'REbecca',genres:['Featured Actress','Ngực lớn','Thủ dâm','Idol'],url:'https://st11.ikisoda.com/remote_control.php?time=1790596583&cv=ea147f51a4a876d570dcad315954d839&lr=0&cv2=2c84da8390448c314b0fb124f68c9403&file=%2Fvideos%2F22000%2F22639%2F22639_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=fbec49fdc53e729c9bfc9601c79760d7'},
+ {id:'ikisoda:sdam-101',code:'SDAM-101',name:"[SDAM-101] Big Tits Monaka & Runa's Raw Bar Creampie",poster:'https://ikisoda.com/contents/videos_screenshots/22000/22659/preview.jpg',release:'2024-02-12',duration:'162 Min',studio:'SOD Create',genres:['Ngực lớn','Creampie','Beautiful Girl','Squirting'],url:'https://st11.ikisoda.com/remote_control.php?time=1790596596&cv=74315d8796b3fe14b478e5fa5b971115&lr=0&cv2=5882ea33ed0455defe71fbb6ae85cdb1&file=%2Fvideos%2F22000%2F22659%2F22659_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=e785d7deabaf6d87328a91d7c924e875'}
+];
+const ikisodaById=new Map(ikisodaMovies.map(x=>[x.id,x]));
+function ikisodaMetaFor(x){return {id:x.id,type:'movie',name:x.name,poster:x.poster,posterShape:'poster',releaseInfo:x.release.slice(0,4),released:new Date(x.release+'T00:00:00.000Z').toISOString(),genres:x.genres,genre:x.genres,description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};}
+function ikisodaStreamFor(x){return [{name:'IkiSoda 1080p · CDN DIRECT',title:'1080p · verified HTTP 206 video/mp4',url:x.url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];}
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
  try{
@@ -252,9 +257,9 @@ if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path.startsWith('/play/'))return filmProxy(req,res,path);
 if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
-if(path==='/catalog/movie/ikisoda.json')return json(res,{metas:[ikisodaMeta]});
-if(path==='/meta/movie/'+ikisodaId+'.json')return json(res,{meta:ikisodaMeta});
-if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});
+if(path==='/catalog/movie/ikisoda.json')return json(res,{metas:ikisodaMovies.map(ikisodaMetaFor)});
+if(path.startsWith('/meta/movie/ikisoda:')&&path.endsWith('.json')){const x=ikisodaById.get(path.slice('/meta/movie/'.length,-5));return x?json(res,{meta:ikisodaMetaFor(x)}):json(res,{error:'Not found'},404);}
+if(path.startsWith('/stream/movie/ikisoda:')&&path.endsWith('.json')){const x=ikisodaById.get(path.slice('/stream/movie/'.length,-5));return x?json(res,{streams:ikisodaStreamFor(x)}):json(res,{streams:[]});}
 if(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
 
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
