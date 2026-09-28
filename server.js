@@ -8,10 +8,48 @@ const cors = {'access-control-allow-origin':'*','access-control-allow-methods':'
 function json(res, data, status=200) { const body=JSON.stringify(data);res.writeHead(status, {...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(body)});res.end(body); }
 const manifest={id:'community.missav.hls.test',version:'0.1.0',name:'MissAV HLS Test',description:'Isolated 1080p header test; no HLS proxy',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-test',name:'Test 1080p'}],idPrefixes:['missav:']};
 const meta={id,type:'movie',name:'FTHTD-213 — 1080p test',description:'Surrit HLS; playback requires Referer https://missav.ws/'};
-const streams=[{name:'Surrit 1080p · direct headers',title:'1080p · Referer test',url:VIDEO,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'},response:{'Access-Control-Allow-Origin':'*'}}}}];
-http.createServer((req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+const streams=[{name:'Surrit 1080p · server proxy',title:'1080p · Render Referer proxy',url:(ROOT || 'https://missav-uimx.onrender.com')+'/hls/1080p/video.m3u8'},{name:'Surrit 1080p · direct headers',title:'1080p · Referer test',url:VIDEO,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'},response:{'Access-Control-Allow-Origin':'*'}}}}];
+const HLS_BASE = 'https://surrit.com/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/';
+async function proxyHls(req,res,path){
+ const suffix=path.slice('/hls/'.length);
+ if(!suffix || suffix.split('/').some(x=>x==='..') || !/^[a-zA-Z0-9_./-]+$/.test(suffix))return json(res,{error:'Invalid path'},400);
+ const target=new URL(suffix,HLS_BASE);
+ if(target.origin!=='https://surrit.com' || !target.pathname.startsWith(new URL(HLS_BASE).pathname))return json(res,{error:'Invalid upstream'},400);
+ try{
+ const headers={Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'};
+ if(req.headers.range)headers.Range=req.headers.range;
+ const upstream=await fetch(target,{headers,signal:AbortSignal.timeout(25000)});
+ if(!upstream.ok){res.writeHead(upstream.status,{...cors,'content-type':'text/plain'});return res.end('Upstream HTTP '+upstream.status);}
+ const playlist=suffix.endsWith('.m3u8');
+ const outHeaders={...cors,'content-type':playlist?'application/vnd.apple.mpegurl':(upstream.headers.get('content-type')||'application/octet-stream'),'cache-control':'no-store'};
+ for(const h of ['content-range','accept-ranges','content-length'])if(upstream.headers.has(h)&&!playlist)outHeaders[h]=upstream.headers.get(h);
+ if(playlist){
+ let body=await upstream.text();
+ body=body.split(/(\r?\n)/).map(line=>{
+ const t=line.trim();
+ if(!t)return line;
+ if(t.startsWith('#')){
+ return line.replace(/URI="([^"]+)"/g,(_,u)=>'URI="'+rewrite(u,target)+'"');
+ }
+ return rewrite(t,target);
+ }).join('');
+ res.writeHead(200,{...outHeaders,'content-length':Buffer.byteLength(body)});return res.end(body);
+ }
+ res.writeHead(upstream.status,outHeaders);
+ if(req.method==='HEAD')return res.end();
+ const {Readable}=await import('node:stream');
+ Readable.fromWeb(upstream.body).on('error',()=>res.destroy()).pipe(res);
+ }catch(e){if(!res.headersSent)json(res,{error:'Upstream unavailable'},502);else res.destroy();}
+}
+function rewrite(value,base){
+ const url=new URL(value,base);
+ if(url.origin!=='https://surrit.com'||!url.pathname.startsWith(new URL(HLS_BASE).pathname))return value;
+ return '/hls/'+url.pathname.slice(new URL(HLS_BASE).pathname.length)+url.search;
+}
+http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
 if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
 if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',source:'Surrit direct test, no video proxy'});
+if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path==='/manifest.json')return json(res,manifest);
 if(path==='/catalog/movie/missav-test.json')return json(res,{metas:[meta]});
 if(path==='/meta/movie/'+id+'.json')return json(res,{meta});
