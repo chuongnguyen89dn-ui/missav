@@ -35,7 +35,11 @@ function filmMeta(f){
  };
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
-const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
+const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
+const ikisodaId='ikisoda:hsm-061';
+const ikisodaMeta={id:ikisodaId,type:'movie',name:'HSM-061 — IkiSoda 1080p Test',description:'IkiSoda direct 1080p MP4 test'};
+const ikisoda1080='https://ikisoda.com/get_file/18/7d6991d170ace751543cc36b25648b3cee75e9f524/22000/22675/22675_1080p.mp4/';
+const ikisodaStreams=[{name:'IkiSoda 1080p · DIRECT',title:'1080p · direct MP4 test',url:ikisoda1080,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/',Origin:'https://ikisoda.com','User-Agent':'Mozilla/5.0'}}}}];
 function publicStream(f){
  const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');
  const u=new URL(source.url);
@@ -224,6 +228,10 @@ if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path.startsWith('/play/'))return filmProxy(req,res,path);
 if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
+if(path==='/catalog/movie/ikisoda.json')return json(res,{metas:[ikisodaMeta]});
+if(path==='/meta/movie/'+ikisodaId+'.json')return json(res,{meta:ikisodaMeta});
+if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});
+
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
 if(path.startsWith('/stream/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/stream/movie/'.length,-5));return f?json(res,{streams:publicStream(f)}):json(res,{streams:[]});}
 if(path==='/catalog-status.json')return json(res,{total:Object.keys(rawScan).length,verified:verified.length,excluded:Object.keys(rawScan).length-verified.length});
