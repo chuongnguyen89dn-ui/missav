@@ -47,9 +47,20 @@ function rewrite(value,base){
  if(url.origin!=='https://surrit.com'||!url.pathname.startsWith(new URL(HLS_BASE).pathname))return value;
  return '/hls/'+url.pathname.slice(new URL(HLS_BASE).pathname.length)+url.search;
 }
+async function diagnose(req,res){
+ const target=new URL('1080p/video.m3u8',HLS_BASE);
+ const started=Date.now();
+ try{
+  const upstream=await fetch(target,{headers:{Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(15000)});
+  const body=await upstream.text();
+  const isPlaylist=body.trimStart().startsWith('#EXTM3U');
+  return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:upstream.status,upstreamContentType:upstream.headers.get('content-type'),playlistValid:isPlaylist,playlistLines:isPlaylist?body.split(/\\r?\\n/).length:0,elapsedMs:Date.now()-started,bodyPreview:isPlaylist?body.slice(0,240):body.slice(0,160),note:upstream.status===403?'Surrit rejected the request from Render':'This checks playlist only, not segment playback'});
+ }catch(e){return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:null,playlistValid:false,error:e?.name||'FetchError',message:e?.message||'Unknown',elapsedMs:Date.now()-started},502);}
+}
 http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
 if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
 if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',source:'Surrit direct test, no video proxy'});
+if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path==='/manifest.json')return json(res,manifest);
 if(path==='/catalog/movie/missav-test.json')return json(res,{metas:[meta]});
