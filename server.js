@@ -104,19 +104,27 @@ async function freshIkiSodaUrl(x){
   const html=await page.text();
   const expected=String(x.media_id||streamMediaId(x.get_file_1080)||streamMediaId(x.url)||'');
   const candidates=extractIkiGetFiles(html).filter(u=>!expected||streamMediaId(u)===expected);
+  const diag=[];
   for(const base of candidates.slice(0,3)){
-   const u=new URL(base); u.searchParams.set('rnd',String(Date.now()));
-   const r=await fetch(u,{headers:{...headers,Referer:pageUrl,Origin:'https://ikisoda.com',Range:'bytes=0-1'},redirect:'manual',signal:AbortSignal.timeout(1800)});
-   const loc=r.headers.get('location');
-   if([301,302,303,307,308].includes(r.status)&&loc){
-    const signed=new URL(loc,u).toString();
-    if(!expected||streamMediaId(signed)===expected){
-     console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,get_file_status:r.status,total_ms:Date.now()-started,result:'fresh_signed'}));
-     return signed;
+   const variants=[base];
+   try{const u=new URL(base);u.searchParams.set('rnd',String(Date.now()));variants.push(u.toString());}catch{}
+   for(const candidate of [...new Set(variants)]){
+    const cookie=page.headers.get('set-cookie')||'';
+    const reqHeaders={...headers,Referer:pageUrl,Range:'bytes=0-1'};
+    if(cookie)reqHeaders.Cookie=cookie.split(',').map(v=>v.split(';')[0]).join('; ');
+    const r=await fetch(candidate,{headers:reqHeaders,redirect:'manual',signal:AbortSignal.timeout(1800)});
+    const loc=r.headers.get('location');
+    diag.push({status:r.status,location:!!loc,rnd:new URL(candidate).searchParams.get('rnd')||null});
+    if([301,302,303,307,308].includes(r.status)&&loc){
+     const signed=new URL(loc,candidate).toString();
+     if(!expected||streamMediaId(signed)===expected){
+      console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,diag,get_file_status:r.status,total_ms:Date.now()-started,result:'fresh_signed'}));
+      return signed;
+     }
     }
    }
   }
-  console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,total_ms:Date.now()-started,result:'not_found'}));
+  console.log('[IKISODA_HTTP]',JSON.stringify({code:x.code,page_status:page.status,candidates:candidates.length,diag,total_ms:Date.now()-started,result:'not_found'}));
  }catch(e){console.error('[IKISODA_HTTP]',JSON.stringify({code:x.code,total_ms:Date.now()-started,result:'error',error:e.message}));}
  return null;
 }
