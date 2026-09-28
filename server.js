@@ -4,8 +4,51 @@ const rawScan = JSON.parse([1,2,3,4,5].map(n=>readFileSync(new URL('./data/sourc
 const verified = Object.values(rawScan).filter(f=>f.status==='ok_1080' && Array.isArray(f.streams_1080) && f.streams_1080.some(s=>s.quality==='1080p' && s.verification==='master_resolution_1080' && s.url?.startsWith('https://surrit.com/') && s.url.endsWith('/1080p/video.m3u8')));
 const filmById = new Map(verified.map(f=>['missav:'+f.code.toLowerCase(),f]));
 function filmMeta(f){return {id:'missav:'+f.code.toLowerCase(),type:'movie',name:f.title||f.code,poster:f.poster||undefined,posterShape:'poster',description:f.description||'',releaseInfo:f.release_date||undefined,genres:(f.genres||'').split(',').map(x=>x.trim()).filter(Boolean),links:f.url?[{name:'Source',category:'source',url:f.url}]:[]};}
-const publicManifest={id:'community.missav.hls.test',version:'0.2.0',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
-function publicStream(f){const source=f.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');return [{name:'MissAV · 1080p',title:'1080p · verified master playlist',url:source.url,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://missav.ws/',Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'}}}}];}
+const publicManifest={id:'community.missav.hls.test',version:'0.2.1',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
+function publicStream(f){const code=f.code.toLowerCase();return [{name:'MissAV · 1080p proxy',title:'1080p · Referer handled by server',url:(ROOT || 'https://missav-uimx.onrender.com')+'/play/'+encodeURIComponent(code)+'/1080p/video.m3u8',behaviorHints:{notWebReady:true}}];}
+async function filmProxy(req,res,path){
+ const match=path.match(/^\\/play\\/([a-z0-9-]+)\\/(.+)$/i);
+ if(!match)return json(res,{error:'Invalid stream path'},400);
+ const film=filmById.get('missav:'+match[1].toLowerCase());
+ if(!film)return json(res,{error:'Unknown film'},404);
+ const source=film.streams_1080.find(s=>s.quality==='1080p'&&s.verification==='master_resolution_1080');
+ const sourceUrl=new URL(source.url);
+ const basePath=sourceUrl.pathname.slice(0,sourceUrl.pathname.indexOf('/1080p/'))+'/';
+ const suffix=match[2];
+ if(suffix.split('/').some(x=>x==='..')||! /^[a-zA-Z0-9_.\\/-]+$/.test(suffix))return json(res,{error:'Invalid media path'},400);
+ const original=new URL(req.url,'http://localhost');
+ const target=new URL(suffix+original.search,sourceUrl.origin+basePath);
+ if(target.origin!==sourceUrl.origin||!target.pathname.startsWith(basePath))return json(res,{error:'Invalid upstream'},400);
+ const headers={Referer:film.url||REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'};
+ if(req.headers.range)headers.Range=req.headers.range;
+ try{
+  const upstream=await fetch(target,{headers,signal:AbortSignal.timeout(25000)});
+  console.log('[FILM_HLS]',JSON.stringify({code:film.code,file:suffix,status:upstream.status,method:req.method}));
+  if(!upstream.ok){res.writeHead(upstream.status,{...cors,'content-type':'text/plain'});return res.end('Upstream HTTP '+upstream.status);}
+  const playlist=target.pathname.endsWith('.m3u8');
+  const out={...cors,'content-type':playlist?'application/vnd.apple.mpegurl':upstream.headers.get('content-type')||'application/octet-stream','cache-control':'no-store'};
+  for(const h of ['content-range','accept-ranges','content-length'])if(!playlist&&upstream.headers.has(h))out[h]=upstream.headers.get(h);
+  if(playlist){
+   const rewriteUri=(u)=>{
+    const resolved=new URL(u,target);
+    if(resolved.origin!==sourceUrl.origin||!resolved.pathname.startsWith(basePath))return u;
+    return '/play/'+encodeURIComponent(film.code.toLowerCase())+'/'+resolved.pathname.slice(basePath.length)+resolved.search;
+   };
+   const body=(await upstream.text()).split(/(\\r?\\n)/).map(line=>{
+    const trimmed=line.trim();
+    if(!trimmed)return line;
+    return trimmed.startsWith('#')?line.replace(/URI="([^"]+)"/g,(_,u)=>'URI="'+rewriteUri(u)+'"'):rewriteUri(trimmed);
+   }).join('');
+   res.writeHead(200,{...out,'content-length':Buffer.byteLength(body)});
+   return res.end(req.method==='HEAD'?'':body);
+  }
+  res.writeHead(upstream.status,out);
+  if(req.method==='HEAD')return res.end();
+  const {Readable}=await import('node:stream');
+  Readable.fromWeb(upstream.body).on('error',e=>{console.error('[FILM_HLS_PIPE]',film.code,e.message);res.destroy();}).pipe(res);
+ }catch(e){console.error('[FILM_HLS_ERROR]',film.code,suffix,e.message);if(!res.headersSent)return json(res,{error:'Upstream unavailable',type:e.name},502);res.destroy();}
+}
+
 import http from 'node:http';
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = process.env.PUBLIC_URL?.replace(/\/$/, '') || '';
@@ -142,6 +185,7 @@ if(path.startsWith('/mirror/'))return mirrorProxy(req,res,path);
 if(path==='/diagnose-mirrors.json')return diagnoseMirrors(req,res);
 if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
+if(path.startsWith('/play/'))return filmProxy(req,res,path);
 if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
