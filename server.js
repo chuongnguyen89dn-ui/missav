@@ -57,9 +57,26 @@ async function diagnose(req,res){
   return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:upstream.status,upstreamContentType:upstream.headers.get('content-type'),playlistValid:isPlaylist,playlistLines:isPlaylist?body.split(/\r?\n/).length:0,elapsedMs:Date.now()-started,bodyPreview:isPlaylist?body.slice(0,240):body.slice(0,160),note:upstream.status===403?'Surrit rejected the request from Render':'This checks playlist only, not segment playback'});
  }catch(e){return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:null,playlistValid:false,error:e?.name||'FetchError',message:e?.message||'Unknown',elapsedMs:Date.now()-started},502);}
 }
+async function diagnoseMirrors(req,res){
+ const candidates=[
+  {name:'Original Surrit',url:'https://surrit.com/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/1080p/video.m3u8'},
+  {name:'Reported mirror (unverified)',url:'https://surrit.mrstcdn.store/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/1080p/video.m3u8'}
+ ];
+ const results=await Promise.all(candidates.map(async c=>{
+  const started=Date.now();
+  try{
+   const response=await fetch(c.url,{headers:{Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(12000),redirect:'follow'});
+   const body=await response.text();
+   const playlistValid=response.ok&&body.trimStart().startsWith('#EXTM3U');
+   return {name:c.name,host:new URL(c.url).hostname,status:response.status,contentType:response.headers.get('content-type'),playlistValid,elapsedMs:Date.now()-started,preview:playlistValid?body.slice(0,120):body.slice(0,80),note:playlistValid?'Playlist accessible; segments and Nuvio playback NOT tested':'Not a verified playable source'};
+  }catch(e){return {name:c.name,host:new URL(c.url).hostname,status:null,playlistValid:false,error:e.name,message:e.message,elapsedMs:Date.now()-started};}
+ }));
+ return json(res,{film:'FTHTD-213',test:'candidate 1080p playlist hosts from Render',results,warning:'A playlist HTTP 200 is not proof of segment access or Nuvio playback'});
+}
 http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
 if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
 if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',source:'Surrit direct test, no video proxy'});
+if(path==='/diagnose-mirrors.json')return diagnoseMirrors(req,res);
 if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path==='/manifest.json')return json(res,manifest);
