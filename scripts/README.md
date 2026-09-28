@@ -19,3 +19,5 @@ node scripts/extract-links.mjs --html saved.html --base https://missav.ws/vi/fth
 ```
 
 Output records page URL, code, title/description/poster where present, literal HLS/media URL candidates, UUIDs, hypothetical Surrit mirror URL and optional playlist HTTP status. No playback or segment success is inferred. Do not commit session cookies or signed URLs. No server proxy, crawler or Render traffic is introduced. FTHTD-213 DIRECT playback remains unchanged.
+
+Quality policy: **1080p only**. The extractor excludes 720p/480p and unlabelled master playlists; it does not silently fall back to a lower rendition. If no explicit 1080p candidate is found, output remains empty pending further verification.
