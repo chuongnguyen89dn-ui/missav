@@ -39,7 +39,7 @@ const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissA
 const ikisodaId='ikisoda:hsm-061';
 const ikisodaMeta={id:ikisodaId,type:'movie',name:'HSM-061 — IkiSoda 1080p Test',description:'IkiSoda direct 1080p MP4 test'};
 const ikisoda1080='https://ikisoda.com/get_file/18/7d6991d170ace751543cc36b25648b3cee75e9f524/22000/22675/22675_1080p.mp4/';
-const ikisodaStreams=[{name:'IkiSoda 1080p · RESOLVER',title:'1080p · resolve fresh signed MP4',url:'https://missav-uimx.onrender.com/ikisoda/hsm-061.mp4'}];
+const ikisodaStreams=[{name:'IkiSoda 1080p · CDN DIRECT',title:'1080p · verified HTTP 206 video/mp4',url:'https://st11.ikisoda.com/remote_control.php?time=1790593548&cv=a0d4966adf0f54a7c545de5318c9e9f4&lr=0&cv2=88d262b0530c1db5c3e0f0a91ce8113f&file=%2Fvideos%2F22000%2F22675%2F22675_1080p.mp4&cv3=c1e870c6fb1885d33d5de4c83ed56bfd&cv4=df90c96b2d2ba6eb1c232aa56dd31291',behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:'https://ikisoda.com/','User-Agent':'Mozilla/5.0'}}}}];
 async function ikisodaResolve(req,res){
  const pageUrl='https://ikisoda.com/videos/hsm-061-hino-akari-s-cosplay-debut-erection-explosion/';
  try{
