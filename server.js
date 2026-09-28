@@ -254,7 +254,8 @@ if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json')return json(res,{metas:[ikisodaMeta]});
 if(path==='/meta/movie/'+ikisodaId+'.json')return json(res,{meta:ikisodaMeta});
-if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});\nif(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
+if(path==='/stream/movie/'+ikisodaId+'.json')return json(res,{streams:ikisodaStreams});
+if(path==='/ikisoda/hsm-061.mp4')return ikisodaResolve(req,res);
 
 if(path.startsWith('/meta/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/meta/movie/'.length,-5));return f?json(res,{meta:filmMeta(f)}):json(res,{error:'Not found'},404);}
 if(path.startsWith('/stream/movie/missav:')&&path.endsWith('.json')){const f=filmById.get(path.slice('/stream/movie/'.length,-5));return f?json(res,{streams:publicStream(f)}):json(res,{streams:[]});}
