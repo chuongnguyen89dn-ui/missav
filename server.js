@@ -8,7 +8,7 @@ const cors = {'access-control-allow-origin':'*','access-control-allow-methods':'
 function json(res, data, status=200) { const body=JSON.stringify(data);res.writeHead(status, {...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(body)});res.end(body); }
 const manifest={id:'community.missav.hls.test',version:'0.1.2',name:'MissAV HLS Test',description:'Isolated 1080p page-Referer HLS proxy test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-test',name:'Test 1080p'}],idPrefixes:['missav:']};
 const meta={id,type:'movie',name:'FTHTD-213 — 1080p test',description:'Surrit HLS; playback requires Referer https://missav.ws/'};
-const streams=[{name:'Surrit 1080p · server proxy',title:'1080p · Render Referer proxy',url:(ROOT || 'https://missav-uimx.onrender.com')+'/hls/1080p/video.m3u8'},{name:'Surrit 1080p · direct headers',title:'1080p · Referer test',url:VIDEO,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'},response:{'Access-Control-Allow-Origin':'*'}}}}];
+const streams=[{name:'Mirror 1080p · server proxy TEST',title:'1080p · mirror via Render (experimental)',url:(ROOT || 'https://missav-uimx.onrender.com')+'/mirror/1080p/video.m3u8'},{name:'Surrit 1080p · server proxy',title:'1080p · Render Referer proxy',url:(ROOT || 'https://missav-uimx.onrender.com')+'/hls/1080p/video.m3u8'},{name:'Surrit 1080p · direct headers',title:'1080p · Referer test',url:VIDEO,behaviorHints:{notWebReady:true,proxyHeaders:{request:{Referer:REF,Origin:'https://missav.ws','User-Agent':'Mozilla/5.0'},response:{'Access-Control-Allow-Origin':'*'}}}}];
 const HLS_BASE = 'https://surrit.com/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/';
 async function proxyHls(req,res,path){
  const suffix=path.slice('/hls/'.length);
@@ -73,9 +73,63 @@ async function diagnoseMirrors(req,res){
  }));
  return json(res,{film:'FTHTD-213',test:'candidate 1080p playlist hosts from Render',results,warning:'A playlist HTTP 200 is not proof of segment access or Nuvio playback'});
 }
+const MIRROR_BASE = 'https://surrit.mrstcdn.store/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/';
+async function mirrorProxy(req,res,path){
+ const suffix=path.slice('/mirror/'.length);
+ if(!suffix||suffix.split('/').some(x=>x==='..')||!/^[a-zA-Z0-9_./-]+$/.test(suffix))return json(res,{error:'Invalid path'},400);
+ const base=new URL(MIRROR_BASE), target=new URL(suffix+new URL(req.url,'http://localhost').search,base);
+ if(target.origin!==base.origin||!target.pathname.startsWith(base.pathname))return json(res,{error:'Invalid upstream'},400);
+ try{
+  const headers={Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'};
+  if(req.headers.range)headers.Range=req.headers.range;
+  const upstream=await fetch(target,{headers,signal:AbortSignal.timeout(25000)});
+  if(!upstream.ok){console.log('[MIRROR_UPSTREAM]',JSON.stringify({path:suffix,status:upstream.status}));return json(res,{error:'Mirror upstream error',status:upstream.status},upstream.status);}
+  const playlist=suffix.endsWith('.m3u8');
+  const out={...cors,'content-type':playlist?'application/vnd.apple.mpegurl':upstream.headers.get('content-type')||'application/octet-stream','cache-control':'no-store'};
+  for(const h of ['content-range','accept-ranges','content-length'])if(!playlist&&upstream.headers.has(h))out[h]=upstream.headers.get(h);
+  if(playlist){
+   const body=(await upstream.text()).split(/(\r?\n)/).map(line=>{
+    const rewriteMirror=u=>{const v=new URL(u,target);return v.origin===base.origin&&v.pathname.startsWith(base.pathname)?'/mirror/'+v.pathname.slice(base.pathname.length)+v.search:u;};
+    const t=line.trim();
+    return !t?line:t.startsWith('#')?line.replace(/URI="([^"]+)"/g,(_,u)=>'URI="'+rewriteMirror(u)+'"'):rewriteMirror(t);
+   }).join('');
+   res.writeHead(200,{...out,'content-length':Buffer.byteLength(body)});return res.end(req.method==='HEAD'?'':body);
+  }
+  res.writeHead(upstream.status,out);
+  if(req.method==='HEAD')return res.end();
+  const {Readable}=await import('node:stream');
+  Readable.fromWeb(upstream.body).on('error',()=>res.destroy()).pipe(res);
+ }catch(e){if(!res.headersSent)return json(res,{error:'Mirror unavailable',type:e.name},502);res.destroy();}
+}
+async function diagnoseMirrorSegments(req,res){
+ const base=new URL(MIRROR_BASE), target=new URL('1080p/video.m3u8',base);
+ const headers={Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'};
+ try{
+  const playlistResponse=await fetch(target,{headers,signal:AbortSignal.timeout(12000)});
+  const body=await playlistResponse.text();
+  if(!playlistResponse.ok||!body.trimStart().startsWith('#EXTM3U'))return json(res,{playlistStatus:playlistResponse.status,playlistValid:false},502);
+  const lines=body.split(/\r?\n/);
+  const first=lines.map(x=>x.trim()).find(x=>x&&!x.startsWith('#'));
+  const key=lines.join('\n').match(/#EXT-X-KEY:[^\n]*URI="([^"]+)"/)?.[1];
+  const sample=async (name,uri)=>{
+   if(!uri)return {name,available:false,reason:'No URI in playlist'};
+   const url=new URL(uri,target);
+   if(url.origin!==base.origin||!url.pathname.startsWith(base.pathname))return {name,available:false,reason:'External URL; not fetched',host:url.hostname};
+   try{
+    const r=await fetch(url,{headers:{...headers,Range:'bytes=0-1023'},signal:AbortSignal.timeout(12000)});
+    const type=r.headers.get('content-type');const sampleBytes=new Uint8Array(await r.arrayBuffer());
+    return {name,status:r.status,contentType:type,bytesRead:sampleBytes.length,available:r.ok&&sampleBytes.length>0};
+   }catch(e){return {name,available:false,error:e.name,message:e.message};}
+  };
+  const checks=await Promise.all([sample('first media entry',first),...(key?[sample('encryption key',key)]:[])]);
+  return json(res,{film:'FTHTD-213',playlistStatus:playlistResponse.status,playlistValid:true,hasKey:!!key,checks,note:'Only first media entry sampled; Nuvio playback still requires testing'});
+ }catch(e){return json(res,{error:e.name,message:e.message},502);}
+}
 http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
 if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
 if(path==='/' || path==='/health')return json(res,{status:'ok',manifest:ROOT?ROOT+'/manifest.json':'/manifest.json',source:'Surrit direct test, no video proxy'});
+if(path==='/diagnose-mirror-segments.json')return diagnoseMirrorSegments(req,res);
+if(path.startsWith('/mirror/'))return mirrorProxy(req,res,path);
 if(path==='/diagnose-mirrors.json')return diagnoseMirrors(req,res);
 if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
