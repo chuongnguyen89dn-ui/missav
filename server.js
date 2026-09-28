@@ -54,7 +54,7 @@ async function diagnose(req,res){
   const upstream=await fetch(target,{headers:{Referer:REF,Origin:'https://missav.ws/','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(15000)});
   const body=await upstream.text();
   const isPlaylist=body.trimStart().startsWith('#EXTM3U');
-  return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:upstream.status,upstreamContentType:upstream.headers.get('content-type'),playlistValid:isPlaylist,playlistLines:isPlaylist?body.split(/\\r?\\n/).length:0,elapsedMs:Date.now()-started,bodyPreview:isPlaylist?body.slice(0,240):body.slice(0,160),note:upstream.status===403?'Surrit rejected the request from Render':'This checks playlist only, not segment playback'});
+  return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:upstream.status,upstreamContentType:upstream.headers.get('content-type'),playlistValid:isPlaylist,playlistLines:isPlaylist?body.split(/\r?\n/).length:0,elapsedMs:Date.now()-started,bodyPreview:isPlaylist?body.slice(0,240):body.slice(0,160),note:upstream.status===403?'Surrit rejected the request from Render':'This checks playlist only, not segment playback'});
  }catch(e){return json(res,{test:'FTHTD-213 Surrit 1080p from Render',upstreamStatus:null,playlistValid:false,error:e?.name||'FetchError',message:e?.message||'Unknown',elapsedMs:Date.now()-started},502);}
 }
 http.createServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
