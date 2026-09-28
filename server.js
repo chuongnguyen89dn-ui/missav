@@ -7,7 +7,7 @@ function filmMeta(f){return {id:'missav:'+f.code.toLowerCase(),type:'movie',name
 const publicManifest={id:'community.missav.hls.test',version:'0.2.1',name:'MissAV 1080p',description:'Verified 1080p release catalog; metadata enrichment pending',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'}],idPrefixes:['missav:']};
 function publicStream(f){const code=f.code.toLowerCase();return [{name:'MissAV · 1080p proxy',title:'1080p · Referer handled by server',url:(ROOT || 'https://missav-uimx.onrender.com')+'/play/'+encodeURIComponent(code)+'/1080p/video.m3u8',behaviorHints:{notWebReady:true}}];}
 async function filmProxy(req,res,path){
- const match=path.match(/^\\/play\\/([a-z0-9-]+)\\/(.+)$/i);
+ const match=path.match(new RegExp('^/play/([a-z0-9-]+)/(.+)$','i'));
  if(!match)return json(res,{error:'Invalid stream path'},400);
  const film=filmById.get('missav:'+match[1].toLowerCase());
  if(!film)return json(res,{error:'Unknown film'},404);
@@ -15,7 +15,7 @@ async function filmProxy(req,res,path){
  const sourceUrl=new URL(source.url);
  const basePath=sourceUrl.pathname.slice(0,sourceUrl.pathname.indexOf('/1080p/'))+'/';
  const suffix=match[2];
- if(suffix.split('/').some(x=>x==='..')||! /^[a-zA-Z0-9_.\\/-]+$/.test(suffix))return json(res,{error:'Invalid media path'},400);
+ if(suffix.split('/').some(x=>x==='..')||!new RegExp('^[a-zA-Z0-9_./-]+$').test(suffix))return json(res,{error:'Invalid media path'},400);
  const original=new URL(req.url,'http://localhost');
  const target=new URL(suffix+original.search,sourceUrl.origin+basePath);
  if(target.origin!==sourceUrl.origin||!target.pathname.startsWith(basePath))return json(res,{error:'Invalid upstream'},400);
@@ -34,11 +34,11 @@ async function filmProxy(req,res,path){
     if(resolved.origin!==sourceUrl.origin||!resolved.pathname.startsWith(basePath))return u;
     return '/play/'+encodeURIComponent(film.code.toLowerCase())+'/'+resolved.pathname.slice(basePath.length)+resolved.search;
    };
-   const body=(await upstream.text()).split(/(\\r?\\n)/).map(line=>{
+   const body=(await upstream.text()).split(String.fromCharCode(10)).map(line=>{
     const trimmed=line.trim();
     if(!trimmed)return line;
     return trimmed.startsWith('#')?line.replace(/URI="([^"]+)"/g,(_,u)=>'URI="'+rewriteUri(u)+'"'):rewriteUri(trimmed);
-   }).join('');
+   }).join(String.fromCharCode(10));
    res.writeHead(200,{...out,'content-length':Buffer.byteLength(body)});
    return res.end(req.method==='HEAD'?'':body);
   }
