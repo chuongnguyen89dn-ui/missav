@@ -47,7 +47,7 @@ function filmMeta(f){
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
 const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'}],idPrefixes:['missav:','ikisoda:']};
-const ikisodaMovies=()=>getIkisodaCatalog().then(c=>c.movies||[]);
+const ikisodaMovies=()=>getIkisodaCatalog().then(c=>Array.isArray(c)?c:(c?.movies||[]));
 function ikisodaMetaFor(x){const d=String(x.release||'');const meta={id:x.id,type:'movie',name:x.name||x.code||x.id,poster:x.poster||undefined,posterShape:'poster',releaseInfo:d?d.slice(0,4):undefined,released:d?new Date(d+'T00:00:00.000Z').toISOString():undefined,genres:x.genres||[],genre:x.genres||[],description:[x.code,x.studio,x.duration].filter(Boolean).join(' · '),language:'Tiếng Nhật'};return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined));}
 function streamMediaId(u){
  const m=String(u||'').match(/\/(\d+)\/\1_1080p\.mp4/i);
