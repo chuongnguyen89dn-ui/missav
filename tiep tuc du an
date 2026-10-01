@@ -1,0 +1,12 @@
+TIEP TUC DU AN — MISSAV ADDON
+
+CAP NHAT 2026-10-02
+- Repo: chuongnguyen89dn-ui/missav.
+- Muc tieu: addon Stremio/Nuvio doc lap de test playback 1080p MissAV.
+- FTHTD-213 da co master HLS quang cao rendition 1920x1080; log user xac nhan URL 1080 phat duoc trong VLC voi Referer https://missav.ws/.
+- Master va playlist 720p tung tra 403 khi thieu Referer va 200 khi co Referer trong diagnostic log.
+- Khong co server-side video proxy trong baseline hien tai. Nuvio phai ho tro behaviorHints.proxyHeaders.request cho playlist/segment thi playback moi dung duoc.
+- Chua duoc coi la Nuvio playback 1080p da validate cho den khi test tren thiet bi that.
+- Render service hien co: missav, Docker, free plan, URL https://missav-uimx.onrender.com.
+- Milestone tiep theo phai xac minh /health, /manifest.json, catalog/meta/stream, sau do test Nuvio playback + seek + sustained playback truoc khi mo rong crawler.
+- Day la handoff dau tien cua repo; khong copy handoff tu XemXiec.
