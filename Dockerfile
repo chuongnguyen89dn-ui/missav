@@ -3,7 +3,8 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
 COPY server.js ./
+COPY javhd-test-hook.js ./
 COPY data ./data
 ENV NODE_ENV=production PORT=3000
 EXPOSE 3000
-CMD ["node","server.js"]
+CMD ["node","--import","./javhd-test-hook.js","server.js"]
