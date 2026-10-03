@@ -56,7 +56,8 @@ async function resolveSession(id) {
     ro: tj.ro || '',
     created: Date.now(),
     geoExpires: expires || null,
-    geoTtlSeconds: ttl
+    geoTtlSeconds: ttl,
+    refreshAt: expires > now ? expires - 300 : 0
   };
   console.log('[AV01_TOKEN_TTL]', JSON.stringify({
     id,
@@ -66,6 +67,7 @@ async function resolveSession(id) {
     accessTokenReceived: !!tj.access_token
   }));
   sessions.set(String(id), s);
+  scheduleAv01Refresh(id, s);
   return s;
 }
 
@@ -145,6 +147,20 @@ async function avDirectMaster(req, res, id) {
   });
   return res.end(direct);
 }
+
+function scheduleAv01Refresh(id, session) {
+  if (!session?.geoExpires) return;
+  const delay = Math.max(30000, (session.geoExpires * 1000) - Date.now() - 300000);
+  setTimeout(async () => {
+    try {
+      await resolveSession(id);
+      console.log('[AV01_TOKEN_REFRESH]', JSON.stringify({ id, refreshed: true }));
+    } catch (e) {
+      console.log('[AV01_TOKEN_REFRESH_ERROR]', JSON.stringify({ id, error: String(e?.message || e) }));
+    }
+  }, delay);
+}
+
 
 async function avMaster(req, res, id) {
   const s = await getSession(id);
