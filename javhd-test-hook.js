@@ -64,7 +64,13 @@ async function avProxyTarget(req,res,id,target){
   if(!u.hostname.endsWith('iw01.xyz'))throw Error('AV01 target host rejected');
   console.log('[AV01_UPSTREAM_START]',JSON.stringify({id,host:u.hostname,path:u.pathname}));
   const r=await fetch(avSigned(u.toString(),s),{
-    headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
+    headers:{
+      'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+      'Referer':AV+'/',
+      'sec-ch-ua-platform':'"Windows"',
+      'sec-ch-ua':'"Not=A?Brand";v="99", "HeadlessChrome";v="151", "Chromium";v="151"',
+      'sec-ch-ua-mobile':'?0'
+    },
     signal:AbortSignal.timeout(60000)
   });
   console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers.get('content-type')||'',url:r.url}));
