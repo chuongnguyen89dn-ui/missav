@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const id = process.argv[2];
 const waitMinutes = Number(process.argv[3] || 35);
 
-if (!/^\\d+$/.test(id || '')) {
+if (!/^\d+$/.test(id || '')) {
   console.error('Usage: npm run probe:av01 -- 221293 [minutes]');
   process.exit(2);
 }
