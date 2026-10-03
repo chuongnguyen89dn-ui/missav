@@ -34,6 +34,12 @@ function avCachePut(key,v){
   avMediaCache.delete(key);avMediaCache.set(key,v);
   while(avMediaCache.size>AV_MEDIA_CACHE_MAX)avMediaCache.delete(avMediaCache.keys().next().value);
 }
+function avCacheKey(id,u){
+  const q=new URLSearchParams(u.search);
+  q.delete('access_token');q.delete('ro');
+  const qs=q.toString();
+  return id+':'+u.pathname+(qs?'?'+qs:'');
+}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function avBrowserFetchRaw(url,id){
   const context=await avBrowserContext();
@@ -43,7 +49,8 @@ async function avBrowserFetchRaw(url,id){
       const response=await context.request.get(url,{timeout:6000});
       const body=await response.body();
       last={status:response.status(),headers:response.headers(),body,url};
-      console.log('[AV01_BROWSER_FETCH]',JSON.stringify({id,attempt,status:last.status,bytes:body.length,url}));
+      const safe=new URL(url);safe.searchParams.delete('access_token');safe.searchParams.delete('ro');
+      console.log('[AV01_BROWSER_FETCH]',JSON.stringify({id,attempt,status:last.status,bytes:body.length,url:safe.toString()}));
       if(last.status===200)return last;
       if(![502,503,504].includes(last.status))return last;
     }catch(e){
@@ -121,7 +128,7 @@ function avFirstMediaTargets(text,base){
 async function avWarmMedia(id,s,targets){
   for(const target of targets){
     try{
-      const u=new URL(target);const key=id+':'+u.pathname;
+      const u=new URL(target);const key=avCacheKey(id,u);
       if(avCacheGet(key)||avMediaInflight.has(key))continue;
       avBrowserFetch(avSigned(u.toString(),s),id,key).catch(()=>{});
     }catch{}
@@ -132,10 +139,10 @@ async function avProxyTarget(req,res,id,target){
   const s=await avSession(id);
   const u=new URL(target);
   if(!u.hostname.endsWith('iw01.xyz'))throw Error('AV01 target host rejected');
-  const key=id+':'+u.pathname;
-  console.log('[AV01_MEDIA_PROXY]', JSON.stringify({id,path:u.pathname}));
+  const key=avCacheKey(id,u);
+  console.log('[AV01_MEDIA_PROXY]', JSON.stringify({id,path:u.pathname,query:u.searchParams.get('seg')||''}));
   const r=await avBrowserFetch(avSigned(u.toString(),s),id,key);
-  console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers['content-type']||'',url:u.toString()}));
+  console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers['content-type']||'',path:u.pathname}));
   if(r.status!==200){
     const detail=Buffer.from(r.body).toString('utf8');
     console.error('[AV01_UPSTREAM_ERROR]',JSON.stringify({id,status:r.status,detail:detail.slice(0,500)}));
@@ -165,7 +172,7 @@ async function avMaster(req,res,id){
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
     signal:AbortSignal.timeout(8000)
   });
-  console.log('[AV01_MASTER_UPSTREAM]', JSON.stringify({id,status:r.status,url:r.url}));
+  console.log('[AV01_MASTER_UPSTREAM]', JSON.stringify({id,status:r.status}));
   if(!r.ok)throw Error('AV01 manifest '+r.status);
   const text=await r.text();
   const warmTargets=avFirstMediaTargets(text,r.url);
@@ -181,7 +188,7 @@ async function items(){if(Date.now()-cache.at<60000&&cache.items.length)return c
 function tagName(x){return typeof x==='string'?x:(x?.name||x?.title||'')}
 function meta(x){return Object.fromEntries(Object.entries({id:'av01:'+x.id,type:'movie',name:x?.title_translations?.en||x.title||x.dvd_id||String(x.id),poster:x.cover||x.poster||undefined,posterShape:'poster',description:x?.description_translations?.en||x.description||undefined,genres:(x.tags||[]).map(tagName).filter(Boolean),language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''))}
 function send(res,d,s=200){const b=JSON.stringify(d);res.writeHead(s,{...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(b),'cache-control':'no-store'});res.end(b)}
-http.createServer=function(handler,...rest){return originalCreateServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);try{if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}if(path==='/manifest.json')return send(res,{id:'community.missav.hls.test',version:'0.4.5-av01-faststart',name:'MissAV 1080p',description:'Original MissAV + original IkiSoda + isolated AV01 test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test',name:'Test AV01'}],idPrefixes:['missav:','ikisoda:','av01:']});if(path==='/catalog/movie/av01-test.json')return send(res,{metas:(await items()).map(meta)});
+http.createServer=function(handler,...rest){return originalCreateServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);try{if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}if(path==='/manifest.json')return send(res,{id:'community.missav.hls.test',version:'0.4.6-av01-cachefix',name:'MissAV 1080p',description:'Original MissAV + original IkiSoda + isolated AV01 test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test',name:'Test AV01'}],idPrefixes:['missav:','ikisoda:','av01:']});if(path==='/catalog/movie/av01-test.json')return send(res,{metas:(await items()).map(meta)});
 let m=path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
 if(m)return send(res,{streams:[{name:'AV01 Native HLS',title:'AV01 '+m[1]+' · fast start',url:'https://missav-uimx.onrender.com/av01/'+m[1]+'/master.m3u8',behaviorHints:{filename:'av01.m3u8'}}]});
 m=path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
