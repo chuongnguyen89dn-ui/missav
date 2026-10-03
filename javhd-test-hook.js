@@ -217,7 +217,7 @@ http.createServer = function patchedCreateServer(handler, ...rest) {
           streams: [{
             name: 'AV01 · Native HLS · fresh on Play',
             title: 'AV01 ' + id + ' · resolve fresh HLS',
-            url: '/av01/' + id + '/master.m3u8',
+            url: 'https://missav-uimx.onrender.com/av01/' + id + '/master.m3u8',
             behaviorHints: {
               notWebReady: true,
               proxyHeaders: {
