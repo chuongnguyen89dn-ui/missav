@@ -48,7 +48,23 @@ async function resolveSession(id) {
   if (!tr.ok) throw new Error(`AV01 cdn-access ${tr.status}`);
   const tj = await tr.json();
   if (!tj.access_token) throw new Error('AV01 no access_token');
-  const s = { token: tj.access_token, ro: tj.ro || '', created: Date.now() };
+  const now = Math.floor(Date.now() / 1000);
+  const expires = Number(g.expires) || 0;
+  const ttl = expires > now ? expires - now : null;
+  const s = {
+    token: tj.access_token,
+    ro: tj.ro || '',
+    created: Date.now(),
+    geoExpires: expires || null,
+    geoTtlSeconds: ttl
+  };
+  console.log('[AV01_TOKEN_TTL]', JSON.stringify({
+    id,
+    issuedAt: now,
+    geoExpires: expires || null,
+    geoTtlSeconds: ttl,
+    accessTokenReceived: !!tj.access_token
+  }));
   sessions.set(String(id), s);
   return s;
 }
