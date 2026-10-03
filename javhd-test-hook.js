@@ -48,26 +48,8 @@ async function resolveSession(id) {
   if (!tr.ok) throw new Error(`AV01 cdn-access ${tr.status}`);
   const tj = await tr.json();
   if (!tj.access_token) throw new Error('AV01 no access_token');
-  const now = Math.floor(Date.now() / 1000);
-  const expires = Number(g.expires) || 0;
-  const ttl = expires > now ? expires - now : null;
-  const s = {
-    token: tj.access_token,
-    ro: tj.ro || '',
-    created: Date.now(),
-    geoExpires: expires || null,
-    geoTtlSeconds: ttl,
-    refreshAt: expires > now ? expires - 300 : 0
-  };
-  console.log('[AV01_TOKEN_TTL]', JSON.stringify({
-    id,
-    issuedAt: now,
-    geoExpires: expires || null,
-    geoTtlSeconds: ttl,
-    accessTokenReceived: !!tj.access_token
-  }));
+  const s = { token: tj.access_token, ro: tj.ro || '', created: Date.now() };
   sessions.set(String(id), s);
-  scheduleAv01Refresh(id, s);
   return s;
 }
 
@@ -148,69 +130,30 @@ async function avDirectMaster(req, res, id) {
   return res.end(direct);
 }
 
-function scheduleAv01Refresh(id, session) {
-  if (!session?.geoExpires) return;
-  const delay = Math.max(30000, (session.geoExpires * 1000) - Date.now() - 300000);
-  setTimeout(async () => {
-    try {
-      await resolveSession(id);
-      console.log('[AV01_TOKEN_REFRESH]', JSON.stringify({ id, refreshed: true }));
-    } catch (e) {
-      console.log('[AV01_TOKEN_REFRESH_ERROR]', JSON.stringify({ id, error: String(e?.message || e) }));
-    }
-  }, delay);
-}
-
-
 async function avMaster(req, res, id) {
-  let s = await getSession(id);
+  const s = await getSession(id);
   const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
-
-  const fetchManifest = async session => fetch(signUrl(master, session), {
+  let r = await fetch(signUrl(master, s), {
     headers: upstreamHeaders(),
-    redirect: 'follow',
-    signal: AbortSignal.timeout(5000)
+    signal: AbortSignal.timeout(6000)
   });
-
-  let r = await fetchManifest(s);
-  if ([401, 403, 404, 502, 503, 504].includes(r.status)) {
-    s = await getSession(id, true);
-    r = await fetchManifest(s);
-  }
-
-  if (!r.ok) throw new Error(`AV01 direct manifest ${r.status}`);
-
-  const text = await r.text();
-  const base = r.url || signUrl(master, s);
-
-  // Render serves only the manifest. Media objects stay direct on IW01 CDN.
-  const direct = text.split(/\r?\n/).map(line => {
-    if (!line.trim()) return line;
-
-    const replaceUri = line.replace(/URI="([^"]+)"/g, (_, v) => {
-      const target = new URL(v, base).toString();
-      return `URI="${signUrl(target, s)}"`;
+  if ([502, 503, 504].includes(r.status)) {
+    const s2 = await getSession(id, true);
+    r = await fetch(signUrl(master, s2), {
+      headers: upstreamHeaders(),
+      signal: AbortSignal.timeout(6000)
     });
-
-    if (replaceUri.trim().startsWith('#')) return replaceUri;
-    return signUrl(new URL(line.trim(), base).toString(), s);
-  }).join('\n') + '\n';
-
-  console.log('[AV01_DIRECT_MANIFEST]', JSON.stringify({
-    id,
-    upstream: base,
-    bytes: Buffer.byteLength(direct),
-    mode: 'manifest-only',
-    mediaProxy: false
-  }));
-
+  }
+  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({ id, status: r.status }));
+  if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
+  const text = await r.text();
+  const rewritten = rewritePlaylist(text, r.url, id);
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
-    'cache-control': 'no-store',
-    'x-av01-media-proxy': 'disabled'
+    'cache-control': 'no-store'
   });
-  return res.end(direct);
+  return res.end(rewritten);
 }
 
 async function avProxyTarget(req, res, id, target) {
