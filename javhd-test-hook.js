@@ -163,29 +163,54 @@ function scheduleAv01Refresh(id, session) {
 
 
 async function avMaster(req, res, id) {
-  const s = await getSession(id);
+  let s = await getSession(id);
   const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
-  let r = await fetch(signUrl(master, s), {
+
+  const fetchManifest = async session => fetch(signUrl(master, session), {
     headers: upstreamHeaders(),
-    signal: AbortSignal.timeout(6000)
+    redirect: 'follow',
+    signal: AbortSignal.timeout(5000)
   });
-  if ([502, 503, 504].includes(r.status)) {
-    const s2 = await getSession(id, true);
-    r = await fetch(signUrl(master, s2), {
-      headers: upstreamHeaders(),
-      signal: AbortSignal.timeout(6000)
-    });
+
+  let r = await fetchManifest(s);
+  if ([401, 403, 404, 502, 503, 504].includes(r.status)) {
+    s = await getSession(id, true);
+    r = await fetchManifest(s);
   }
-  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({ id, status: r.status }));
-  if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
+
+  if (!r.ok) throw new Error(`AV01 direct manifest ${r.status}`);
+
   const text = await r.text();
-  const rewritten = rewritePlaylist(text, r.url, id);
+  const base = r.url || signUrl(master, s);
+
+  // Render serves only the manifest. Media objects stay direct on IW01 CDN.
+  const direct = text.split(/\r?\n/).map(line => {
+    if (!line.trim()) return line;
+
+    const replaceUri = line.replace(/URI="([^"]+)"/g, (_, v) => {
+      const target = new URL(v, base).toString();
+      return `URI="${signUrl(target, s)}"`;
+    });
+
+    if (replaceUri.trim().startsWith('#')) return replaceUri;
+    return signUrl(new URL(line.trim(), base).toString(), s);
+  }).join('\n') + '\n';
+
+  console.log('[AV01_DIRECT_MANIFEST]', JSON.stringify({
+    id,
+    upstream: base,
+    bytes: Buffer.byteLength(direct),
+    mode: 'manifest-only',
+    mediaProxy: false
+  }));
+
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
-    'cache-control': 'no-store'
+    'cache-control': 'no-store',
+    'x-av01-media-proxy': 'disabled'
   });
-  return res.end(rewritten);
+  return res.end(direct);
 }
 
 async function avProxyTarget(req, res, id, target) {
