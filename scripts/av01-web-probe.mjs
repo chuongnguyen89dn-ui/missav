@@ -49,7 +49,7 @@ page.on('response', async res => {
 
 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 console.log('[PAGE_READY]', url);
-console.log('[ACTION] Click the site's Play button. Capture runs for 20 seconds.');
+console.log("[ACTION] Click the site Play button. Capture runs for 20 seconds.");
 
 await page.waitForTimeout(20000);
 
