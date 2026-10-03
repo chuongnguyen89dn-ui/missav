@@ -85,10 +85,10 @@ async function avProxyTarget(req,res,id,target){
 async function avMaster(req,res,id){
   console.log('[AV01_MASTER_START]', JSON.stringify({id}));
   const s=await avSession(id);
-  const master='https://www.av01.media/api/v1/videos/'+id+'/manifest/index90-sv3-v1-a1.m3u8';
+  const master='https://customers.iw01.xyz/api/v1/videos/'+id+'/manifest/index90-sv3-v1-a1.m3u8';
   const r=await fetch(avSigned(master,s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(20000)
+    signal:AbortSignal.timeout(45000)
   });
   console.log('[AV01_MASTER_UPSTREAM]', JSON.stringify({id,status:r.status,url:r.url}));
   if(!r.ok)throw Error('AV01 manifest '+r.status);
