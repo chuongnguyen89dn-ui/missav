@@ -217,7 +217,7 @@ http.createServer = function patchedCreateServer(handler, ...rest) {
           streams: [{
             name: 'AV01 · Native HLS · fresh on Play',
             title: 'AV01 ' + id + ' · resolve fresh HLS',
-            url: '/av01/play/' + id + '.m3u8',
+            url: '/av01/' + id + '/master.m3u8',
             behaviorHints: {
               notWebReady: true,
               proxyHeaders: {
@@ -231,11 +231,26 @@ http.createServer = function patchedCreateServer(handler, ...rest) {
         });
       }
 
-      match = path.match(/^\/av01\/play\/(\d+)\.m3u8$/);
+      match = path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
       if (match) {
         const id = Number(match[1]);
         if (!AV_IDS.includes(id)) return sendJson(res, 'unknown AV01 id', 404);
 
+        const playlist = await resolveAv01(id);
+        res.writeHead(200, {
+          ...cors,
+          'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
+          'cache-control': 'no-store',
+          'content-length': Buffer.byteLength(playlist)
+        });
+        return res.end(playlist);
+      }
+
+      // Backward-compatible alias for clients that cached the temporary route.
+      match = path.match(/^\/av01\/play\/(\d+)\.m3u8$/);
+      if (match) {
+        const id = Number(match[1]);
+        if (!AV_IDS.includes(id)) return sendJson(res, 'unknown AV01 id', 404);
         const playlist = await resolveAv01(id);
         res.writeHead(200, {
           ...cors,
