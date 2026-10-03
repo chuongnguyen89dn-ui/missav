@@ -62,6 +62,10 @@ async function avProxyTarget(req,res,id,target){
   const s=await avSession(id);
   const u=new URL(target);
   if(!u.hostname.endsWith('iw01.xyz'))throw Error('AV01 target host rejected');
+  // Keep the request shape identical to the browser-tested V3 path.
+  // Browser-side resolution is intentionally not used for the media body:
+  // Playwright is used only to refresh the signed session when needed.
+  console.log('[AV01_MEDIA_PROXY]', JSON.stringify({id, path:u.pathname}));
   console.log('[AV01_UPSTREAM_START]',JSON.stringify({id,host:u.hostname,path:u.pathname}));
   const r=await fetch(avSigned(u.toString(),s),{
     headers:{
@@ -99,6 +103,7 @@ async function avProxyTarget(req,res,id,target){
 async function avMaster(req,res,id){
   console.log('[AV01_MASTER_START]', JSON.stringify({id}));
   const s=await avSession(id);
+  // Refresh the signed session through the same browser resolver used by V3.
   const master='https://customers.iw01.xyz/api/v1/videos/'+id+'/manifest/index90-sv3-v1-a1.m3u8';
   const r=await fetch(avSigned(master,s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
