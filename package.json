@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "start": "node --import ./javhd-test-hook.js server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "probe:av01": "node scripts/av01-web-probe.mjs"
   },
   "engines": {
     "node": ">=20"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "playwright": "^1.55.0"
+  }
 }
