@@ -6,7 +6,7 @@ let avBrowserPromise=null;
 let avBrowserContextPromise=null;
 const avMediaCache=new Map();
 const avMediaInflight=new Map();
-const AV_MEDIA_CACHE_MAX=8;
+const AV_MEDIA_CACHE_MAX=12;
 
 async function avBrowser(){
   if(!avBrowserPromise) avBrowserPromise=chromium.launch({headless:true});
@@ -38,9 +38,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function avBrowserFetchRaw(url,id){
   const context=await avBrowserContext();
   let last=null;
-  for(let attempt=1;attempt<=3;attempt++){
+  for(let attempt=1;attempt<=2;attempt++){
     try{
-      const response=await context.request.get(url,{timeout:30000});
+      const response=await context.request.get(url,{timeout:6000});
       const body=await response.body();
       last={status:response.status(),headers:response.headers(),body,url};
       console.log('[AV01_BROWSER_FETCH]',JSON.stringify({id,attempt,status:last.status,bytes:body.length,url}));
@@ -48,8 +48,9 @@ async function avBrowserFetchRaw(url,id){
       if(![502,503,504].includes(last.status))return last;
     }catch(e){
       console.error('[AV01_BROWSER_FETCH_ERROR]',JSON.stringify({id,attempt,error:e.message}));
+      last={status:504,headers:{'content-type':'text/plain'},body:Buffer.from('browser fetch timeout'),url};
     }
-    if(attempt<3)await sleep(attempt*250);
+    if(attempt<2)await sleep(120);
   }
   return last||{status:504,headers:{'content-type':'text/plain'},body:Buffer.from('browser fetch failed'),url};
 }
@@ -65,14 +66,14 @@ async function avBrowserFetch(url,id,key){
 async function avResolveSession(id){
   const geo=await fetch('https://files.iw01.xyz/edge/geo.js?json',{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(60000)
+    signal:AbortSignal.timeout(6000)
   });
   if(!geo.ok)throw Error('AV01 geo '+geo.status);
   const g=await geo.json();
   const qs=new URLSearchParams({token_v2:String(g.token_v2),expires:String(g.expires),ip:String(g.ip)});
   const tr=await fetch('https://customers.iw01.xyz/api/v1/videos/'+id+'/cdn-access?'+qs,{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(15000)
+    signal:AbortSignal.timeout(6000)
   });
   if(!tr.ok)throw Error('AV01 cdn-access '+tr.status);
   const tj=await tr.json();
@@ -94,15 +95,6 @@ function avSession(id){
   return avResolveSession(id).then(s=>{avProxySessions.set(String(id),s);return s});
 }
 
-async function avFetchText(url,s){
-  const r=await fetch(avSigned(url,s),{
-    headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(45000)
-  });
-  if(!r.ok)throw Error('AV01 media '+r.status);
-  return {text:await r.text(),url:r.url};
-}
-
 function avRewritePlaylist(text,base,id){
   return text.split(/\r?\n/).map(line=>{
     if(!line.trim())return line;
@@ -122,9 +114,9 @@ function avFirstMediaTargets(text,base){
   for(const line of text.split(/\r?\n/)){
     const m=line.match(/URI="([^"]+)"/);if(m)out.push(new URL(m[1],base).toString());
     const s=line.trim();if(s&&!s.startsWith('#'))out.push(new URL(s,base).toString());
-    if(out.length>=3)break;
+    if(out.length>=2)break;
   }
-  return [...new Set(out)];
+  return [...new Set(out)].slice(0,2);
 }
 async function avWarmMedia(id,s,targets){
   for(const target of targets){
@@ -160,7 +152,7 @@ async function avProxyTarget(req,res,id,target){
     return res.end(rewritten);
   }
 
-  res.writeHead(200,{...cors,'content-type':type,'cache-control':'private, max-age=120'});
+  res.writeHead(200,{...cors,'content-type':type,'cache-control':'private, max-age=180'});
   if(req.method==='HEAD')return res.end();
   return res.end(r.body);
 }
@@ -171,14 +163,14 @@ async function avMaster(req,res,id){
   const master='https://customers.iw01.xyz/api/v1/videos/'+id+'/manifest/index90-sv3-v1-a1.m3u8';
   const r=await fetch(avSigned(master,s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(45000)
+    signal:AbortSignal.timeout(8000)
   });
   console.log('[AV01_MASTER_UPSTREAM]', JSON.stringify({id,status:r.status,url:r.url}));
   if(!r.ok)throw Error('AV01 manifest '+r.status);
   const text=await r.text();
   const warmTargets=avFirstMediaTargets(text,r.url);
   const rewritten=avRewritePlaylist(text,r.url,id);
-  console.log('[AV01_PROXY]',JSON.stringify({id,status:r.status,bytes:Buffer.byteLength(rewritten),warm:warmTargets.length}));
+  console.log('[AV01_PROXY]',JSON.stringify({id,status:r.status,bytes:Buffer.byteLength(rewritten),warm:warmTargets.length,mode:'fast-start'}));
   res.writeHead(200,{...cors,'content-type':'application/vnd.apple.mpegurl; charset=utf-8','cache-control':'no-store'});
   res.end(rewritten);
   setImmediate(()=>avWarmMedia(id,s,warmTargets));
@@ -189,9 +181,9 @@ async function items(){if(Date.now()-cache.at<60000&&cache.items.length)return c
 function tagName(x){return typeof x==='string'?x:(x?.name||x?.title||'')}
 function meta(x){return Object.fromEntries(Object.entries({id:'av01:'+x.id,type:'movie',name:x?.title_translations?.en||x.title||x.dvd_id||String(x.id),poster:x.cover||x.poster||undefined,posterShape:'poster',description:x?.description_translations?.en||x.description||undefined,genres:(x.tags||[]).map(tagName).filter(Boolean),language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''))}
 function send(res,d,s=200){const b=JSON.stringify(d);res.writeHead(s,{...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(b),'cache-control':'no-store'});res.end(b)}
-http.createServer=function(handler,...rest){return originalCreateServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);try{if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}if(path==='/manifest.json')return send(res,{id:'community.missav.hls.test',version:'0.4.4-av01-perf',name:'MissAV 1080p',description:'Original MissAV + original IkiSoda + isolated AV01 test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test',name:'Test AV01'}],idPrefixes:['missav:','ikisoda:','av01:']});if(path==='/catalog/movie/av01-test.json')return send(res,{metas:(await items()).map(meta)});
+http.createServer=function(handler,...rest){return originalCreateServer(async(req,res)=>{const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);try{if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}if(path==='/manifest.json')return send(res,{id:'community.missav.hls.test',version:'0.4.5-av01-faststart',name:'MissAV 1080p',description:'Original MissAV + original IkiSoda + isolated AV01 test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test',name:'Test AV01'}],idPrefixes:['missav:','ikisoda:','av01:']});if(path==='/catalog/movie/av01-test.json')return send(res,{metas:(await items()).map(meta)});
 let m=path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
-if(m)return send(res,{streams:[{name:'AV01 Native HLS',title:'AV01 '+m[1]+' · fresh resolve on Play',url:'https://missav-uimx.onrender.com/av01/'+m[1]+'/master.m3u8',behaviorHints:{filename:'av01.m3u8'}}]});
+if(m)return send(res,{streams:[{name:'AV01 Native HLS',title:'AV01 '+m[1]+' · fast start',url:'https://missav-uimx.onrender.com/av01/'+m[1]+'/master.m3u8',behaviorHints:{filename:'av01.m3u8'}}]});
 m=path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
 if(m)return await avMaster(req,res,Number(m[1]));
 m=path.match(/^\/av01\/(\d+)\/proxy$/);
