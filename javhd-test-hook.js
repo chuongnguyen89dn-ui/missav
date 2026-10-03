@@ -99,13 +99,13 @@ async function avDirectMaster(req, res, id) {
   const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
   let r = await fetch(signUrl(master, s), {
     headers: upstreamHeaders(),
-    signal: AbortSignal.timeout(6000)
+    signal: AbortSignal.timeout(3500)
   });
   if ([502, 503, 504].includes(r.status)) {
     const s2 = await getSession(id, true);
     r = await fetch(signUrl(master, s2), {
       headers: upstreamHeaders(),
-      signal: AbortSignal.timeout(6000)
+      signal: AbortSignal.timeout(3500)
     });
   }
   if (!r.ok) throw new Error(`AV01 direct manifest ${r.status}`);
@@ -289,15 +289,12 @@ http.createServer = function(handler, ...rest) {
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
         return send(res, { streams: [{
-          name: 'AV01 Direct CDN HLS',
-          title: `AV01 ${m[1]} · direct CDN segments`,
-          url: `https://missav-uimx.onrender.com/av01/${m[1]}/direct.m3u8`,
+          name: 'AV01 Native Streaming',
+          title: `AV01 ${m[1]} · native streaming`,
+          url: `https://missav-uimx.onrender.com/av01/${m[1]}/master.m3u8`,
           behaviorHints: { filename: 'av01.m3u8' }
         }] });
       }
-
-      m = path.match(/^\/av01\/(\d+)\/direct\.m3u8$/);
-      if (m) return await avDirectMaster(req, res, Number(m[1]));
 
       m = path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
       if (m) return await avMaster(req, res, Number(m[1]));
