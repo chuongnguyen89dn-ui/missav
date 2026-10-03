@@ -1,9 +1,9 @@
-import { chromium } from 'playwright';
 import http from 'node:http';
+import { Readable } from 'node:stream';
 
 const originalCreateServer = http.createServer.bind(http);
 const AV = 'https://www.av01.media';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36';
+const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const cors = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, HEAD, OPTIONS',
@@ -11,12 +11,7 @@ const cors = {
 };
 
 let catalogCache = { at: 0, items: [] };
-let browserPromise = null;
 const sessions = new Map();
-const sessionInflight = new Map();
-const mediaCache = new Map();
-const mediaInflight = new Map();
-const MEDIA_CACHE_MAX = 16;
 const SESSION_TTL = 90000;
 
 function safeErr(e) {
@@ -24,22 +19,6 @@ function safeErr(e) {
     .replace(/access_token=[^&\s]+/g, 'access_token=[redacted]')
     .replace(/ro=[^&\s]+/g, 'ro=[redacted]')
     .slice(0, 500);
-}
-
-async function browser() {
-  if (!browserPromise) browserPromise = chromium.launch({ headless: true });
-  return browserPromise;
-}
-
-function cleanHeaders(h = {}) {
-  const out = {};
-  for (const [k, v] of Object.entries(h)) {
-    const key = k.toLowerCase();
-    if (key.startsWith(':')) continue;
-    if (['host', 'content-length', 'cookie'].includes(key)) continue;
-    out[k] = v;
-  }
-  return out;
 }
 
 function signUrl(url, s) {
@@ -50,139 +29,35 @@ function signUrl(url, s) {
   return u.toString();
 }
 
-function cacheKey(id, u) {
-  const q = new URLSearchParams(u.search);
-  q.delete('access_token');
-  q.delete('ro');
-  const qs = q.toString();
-  return `${id}:${u.pathname}${qs ? `?${qs}` : ''}`;
-}
-
-function cacheGet(key) {
-  const v = mediaCache.get(key);
-  if (!v) return null;
-  mediaCache.delete(key);
-  mediaCache.set(key, v);
-  return v;
-}
-
-function cachePut(key, v) {
-  mediaCache.delete(key);
-  mediaCache.set(key, v);
-  while (mediaCache.size > MEDIA_CACHE_MAX) {
-    mediaCache.delete(mediaCache.keys().next().value);
-  }
-}
-
-async function closeSession(id) {
-  const s = sessions.get(String(id));
-  sessions.delete(String(id));
-  if (s?.context) {
-    try { await s.context.close(); } catch {}
-  }
-}
-
-async function resolveBrowserSession(id) {
-  const b = await browser();
-  const pageUrl = `${AV}/en/video/${id}/`;
-  const context = await b.newContext({
-    viewport: { width: 1280, height: 800 },
-    userAgent: UA,
-    extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' }
+async function resolveSession(id) {
+  const geo = await fetch('https://files.iw01.xyz/edge/geo.js?json', {
+    headers: { 'User-Agent': UA, 'Referer': `${AV}/` },
+    signal: AbortSignal.timeout(4000)
   });
-  const page = await context.newPage();
-  const state = {
-    manifestUrl: '',
-    manifestHeaders: {},
-    token: '',
-    ro: '',
-    cdnHeaders: {}
-  };
-
-  page.on('request', req => {
-    try {
-      const url = req.url();
-      const lo = url.toLowerCase();
-      if (lo.includes('/api/v1/videos/') && lo.includes('sv3-v1-a1.m3u8')) {
-        state.manifestUrl = url;
-        state.manifestHeaders = cleanHeaders(req.headers());
-      }
-      if (lo.includes('customers.iw01.xyz') && (lo.includes('sv3-v1-a1') || lo.includes('file90-'))) {
-        const q = new URL(url).searchParams;
-        const token = q.get('access_token');
-        if (token) {
-          state.token = token;
-          state.ro = q.get('ro') || '';
-          state.cdnHeaders = cleanHeaders(req.headers());
-        }
-      }
-    } catch {}
+  if (!geo.ok) throw new Error(`AV01 geo ${geo.status}`);
+  const g = await geo.json();
+  const qs = new URLSearchParams({
+    token_v2: String(g.token_v2),
+    expires: String(g.expires),
+    ip: String(g.ip)
   });
-
-  try {
-    console.log('[AV01_V3_RESOLVE_START]', JSON.stringify({ id }));
-    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    try {
-      await page.locator('video').first().evaluate(v => { try { v.muted = true; v.play(); } catch {} });
-    } catch {}
-
-    const deadline = Date.now() + 12000;
-    while (Date.now() < deadline && (!state.manifestUrl || !state.token)) {
-      await page.waitForTimeout(200);
-    }
-
-    if (!state.manifestUrl) throw new Error('AV01 browser manifest not captured');
-    if (!state.token) throw new Error('AV01 browser CDN token not captured');
-
-    const manifestHeaders = {
-      ...state.manifestHeaders,
-      Referer: pageUrl,
-      'User-Agent': state.manifestHeaders['user-agent'] || UA
-    };
-    const mr = await context.request.get(state.manifestUrl, {
-      headers: manifestHeaders,
-      timeout: 10000
-    });
-    if (mr.status() !== 200) throw new Error(`AV01 captured manifest ${mr.status()}`);
-    const manifestText = await mr.text();
-
-    const s = {
-      id: Number(id),
-      pageUrl,
-      context,
-      manifestUrl: state.manifestUrl,
-      manifestText,
-      manifestHeaders,
-      cdnHeaders: {
-        ...state.cdnHeaders,
-        Referer: pageUrl,
-        'User-Agent': state.cdnHeaders['user-agent'] || UA
-      },
-      token: state.token,
-      ro: state.ro,
-      created: Date.now()
-    };
-    sessions.set(String(id), s);
-    console.log('[AV01_V3_RESOLVE_OK]', JSON.stringify({ id, manifestBytes: Buffer.byteLength(manifestText), token: true }));
-    return s;
-  } catch (e) {
-    try { await context.close(); } catch {}
-    console.error('[AV01_V3_RESOLVE_ERROR]', JSON.stringify({ id, error: safeErr(e) }));
-    throw e;
-  } finally {
-    try { await page.close(); } catch {}
-  }
+  const tr = await fetch(`https://customers.iw01.xyz/api/v1/videos/${id}/cdn-access?${qs}`, {
+    headers: { 'User-Agent': UA, 'Referer': `${AV}/`, 'Origin': AV },
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!tr.ok) throw new Error(`AV01 cdn-access ${tr.status}`);
+  const tj = await tr.json();
+  if (!tj.access_token) throw new Error('AV01 no access_token');
+  const s = { token: tj.access_token, ro: tj.ro || '', created: Date.now() };
+  sessions.set(String(id), s);
+  return s;
 }
 
 async function getSession(id, force = false) {
   const key = String(id);
-  const existing = sessions.get(key);
-  if (!force && existing && Date.now() - existing.created < SESSION_TTL) return existing;
-  if (force) await closeSession(id);
-  if (sessionInflight.has(key)) return sessionInflight.get(key);
-  const p = resolveBrowserSession(id).finally(() => sessionInflight.delete(key));
-  sessionInflight.set(key, p);
-  return p;
+  const s = sessions.get(key);
+  if (!force && s && Date.now() - s.created < SESSION_TTL) return s;
+  return resolveSession(id);
 }
 
 function rewritePlaylist(text, base, id) {
@@ -200,58 +75,43 @@ function rewritePlaylist(text, base, id) {
   }).join('\n') + '\n';
 }
 
-async function fetchMediaOnce(s, target, id) {
-  const signed = signUrl(target, s);
-  const r = await s.context.request.get(signed, {
-    headers: s.cdnHeaders,
-    timeout: 5000
-  });
-  const body = await r.body();
-  return { status: r.status(), headers: r.headers(), body, url: target };
+function upstreamHeaders() {
+  return {
+    'User-Agent': UA,
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': `${AV}/`,
+    'Origin': AV
+  };
 }
 
-async function fetchMedia(id, target, key) {
-  const cached = cacheGet(key);
-  if (cached) {
-    console.log('[AV01_MEDIA_CACHE_HIT]', JSON.stringify({ id, key, bytes: cached.body.length }));
-    return cached;
-  }
-  if (mediaInflight.has(key)) return mediaInflight.get(key);
-
-  const p = (async () => {
-    let s = await getSession(id);
-    try {
-      const r1 = await fetchMediaOnce(s, target, id);
-      console.log('[AV01_V3_MEDIA]', JSON.stringify({ id, attempt: 1, status: r1.status, bytes: r1.body.length, path: new URL(target).pathname }));
-      if (r1.status === 200) {
-        cachePut(key, r1);
-        return r1;
-      }
-      if (![502, 503, 504].includes(r1.status)) return r1;
-    } catch (e) {
-      console.error('[AV01_V3_MEDIA_ERROR]', JSON.stringify({ id, attempt: 1, error: safeErr(e) }));
-    }
-
-    s = await getSession(id, true);
-    try {
-      const r2 = await fetchMediaOnce(s, target, id);
-      console.log('[AV01_V3_MEDIA]', JSON.stringify({ id, attempt: 2, status: r2.status, bytes: r2.body.length, path: new URL(target).pathname }));
-      if (r2.status === 200) cachePut(key, r2);
-      return r2;
-    } catch (e) {
-      console.error('[AV01_V3_MEDIA_ERROR]', JSON.stringify({ id, attempt: 2, error: safeErr(e) }));
-      return { status: 504, headers: { 'content-type': 'text/plain' }, body: Buffer.from('browser media timeout'), url: target };
-    }
-  })().finally(() => mediaInflight.delete(key));
-
-  mediaInflight.set(key, p);
-  return p;
+async function fetchUpstream(id, target, force = false) {
+  const s = await getSession(id, force);
+  return fetch(signUrl(target, s), {
+    headers: upstreamHeaders(),
+    redirect: 'follow',
+    signal: AbortSignal.timeout(8000)
+  });
 }
 
 async function avMaster(req, res, id) {
   const s = await getSession(id);
-  const rewritten = rewritePlaylist(s.manifestText, s.manifestUrl, id);
-  console.log('[AV01_V3_MASTER]', JSON.stringify({ id, bytes: Buffer.byteLength(rewritten) }));
+  const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
+  let r = await fetch(signUrl(master, s), {
+    headers: upstreamHeaders(),
+    signal: AbortSignal.timeout(6000)
+  });
+  if ([502, 503, 504].includes(r.status)) {
+    const s2 = await getSession(id, true);
+    r = await fetch(signUrl(master, s2), {
+      headers: upstreamHeaders(),
+      signal: AbortSignal.timeout(6000)
+    });
+  }
+  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({ id, status: r.status }));
+  if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
+  const text = await r.text();
+  const rewritten = rewritePlaylist(text, r.url, id);
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
@@ -262,28 +122,54 @@ async function avMaster(req, res, id) {
 
 async function avProxyTarget(req, res, id, target) {
   const u = new URL(target);
-  if (!u.hostname.endsWith('iw01.xyz') && !u.hostname.endsWith('av01.media')) {
-    throw new Error('AV01 target host rejected');
-  }
-  const key = cacheKey(id, u);
-  const r = await fetchMedia(id, u.toString(), key);
-  const type = r.headers['content-type'] || 'application/octet-stream';
+  if (!u.hostname.endsWith('iw01.xyz')) throw new Error('AV01 target host rejected');
 
-  if (r.status !== 200) {
+  let r;
+  try {
+    r = await fetchUpstream(id, u.toString(), false);
+    if ([502, 503, 504].includes(r.status)) r = await fetchUpstream(id, u.toString(), true);
+  } catch (e) {
+    console.error('[AV01_NATIVE_FETCH_ERROR]', JSON.stringify({ id, path: u.pathname, error: safeErr(e) }));
+    res.writeHead(504, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end('AV01 upstream timeout\n');
+  }
+
+  const type = r.headers.get('content-type') || 'application/octet-stream';
+  console.log('[AV01_NATIVE_FETCH]', JSON.stringify({ id, status: r.status, path: u.pathname }));
+
+  if (!r.ok) {
     res.writeHead(r.status, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(`AV01 upstream ${r.status}\n`);
   }
 
   if (type.includes('mpegurl') || u.pathname.endsWith('.m3u8')) {
-    const text = Buffer.from(r.body).toString('utf8');
+    const text = await r.text();
     const rewritten = rewritePlaylist(text, r.url, id);
     res.writeHead(200, { ...cors, 'content-type': 'application/vnd.apple.mpegurl; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(rewritten);
   }
 
-  res.writeHead(200, { ...cors, 'content-type': type, 'cache-control': 'private, max-age=180' });
-  if (req.method === 'HEAD') return res.end();
-  return res.end(r.body);
+  const headers = {
+    ...cors,
+    'content-type': type,
+    'cache-control': 'public, max-age=300'
+  };
+  const len = r.headers.get('content-length');
+  const range = r.headers.get('content-range');
+  const acceptRanges = r.headers.get('accept-ranges');
+  if (len) headers['content-length'] = len;
+  if (range) headers['content-range'] = range;
+  if (acceptRanges) headers['accept-ranges'] = acceptRanges;
+
+  res.writeHead(r.status, headers);
+  if (req.method === 'HEAD' || !r.body) return res.end();
+
+  const nodeStream = Readable.fromWeb(r.body);
+  nodeStream.on('error', err => {
+    console.error('[AV01_NATIVE_STREAM_ERROR]', JSON.stringify({ id, path: u.pathname, error: safeErr(err) }));
+    if (!res.destroyed) res.destroy(err);
+  });
+  nodeStream.pipe(res);
 }
 
 async function aj(url, opt = {}) {
@@ -349,9 +235,9 @@ http.createServer = function(handler, ...rest) {
       if (path === '/manifest.json') {
         return send(res, {
           id: 'community.missav.hls.test',
-          version: '0.5.0-av01-v3-browser',
+          version: '0.6.0-av01-native-stream',
           name: 'MissAV 1080p',
-          description: 'Original MissAV + original IkiSoda + AV01 browser-captured resolver',
+          description: 'Original MissAV + original IkiSoda + AV01 lightweight native streaming proxy',
           resources: ['catalog', 'meta', 'stream'],
           types: ['movie'],
           catalogs: [
@@ -367,8 +253,8 @@ http.createServer = function(handler, ...rest) {
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
         return send(res, { streams: [{
-          name: 'AV01 Browser HLS',
-          title: `AV01 ${m[1]} · browser captured`,
+          name: 'AV01 Native Stream',
+          title: `AV01 ${m[1]} · native stream`,
           url: `https://missav-uimx.onrender.com/av01/${m[1]}/master.m3u8`,
           behaviorHints: { filename: 'av01.m3u8' }
         }] });
@@ -391,7 +277,7 @@ http.createServer = function(handler, ...rest) {
 
       return handler(req, res);
     } catch (e) {
-      console.error('[AV01_V3_TEST]', JSON.stringify({ path, error: safeErr(e) }));
+      console.error('[AV01_NATIVE_TEST]', JSON.stringify({ path, error: safeErr(e) }));
       return send(res, { error: safeErr(e) }, 502);
     }
   }, ...rest);
