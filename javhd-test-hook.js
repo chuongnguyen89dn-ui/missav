@@ -62,16 +62,24 @@ async function avProxyTarget(req,res,id,target){
   const s=await avSession(id);
   const u=new URL(target);
   if(!u.hostname.endsWith('iw01.xyz'))throw Error('AV01 target host rejected');
+  console.log('[AV01_UPSTREAM_START]',JSON.stringify({id,host:u.hostname,path:u.pathname}));
   const r=await fetch(avSigned(u.toString(),s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(30000)
+    signal:AbortSignal.timeout(60000)
   });
-  if(!r.ok)throw Error('AV01 upstream '+r.status);
+  console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers.get('content-type')||'',url:r.url}));
+  if(!r.ok){
+    const detail=await r.text().catch(()=> '');
+    console.error('[AV01_UPSTREAM_ERROR]',JSON.stringify({id,status:r.status,detail:detail.slice(0,500)}));
+    res.writeHead(r.status,{...cors,'content-type':'text/plain; charset=utf-8','cache-control':'no-store'});
+    return res.end('AV01 upstream '+r.status+'\n');
+  }
 
   const type=r.headers.get('content-type')||'application/octet-stream';
   if(type.includes('mpegurl')||u.pathname.endsWith('.m3u8')){
     const text=await r.text();
     const rewritten=avRewritePlaylist(text,r.url,id);
+    console.log('[AV01_CHILD_PLAYLIST]',JSON.stringify({id,bytes:Buffer.byteLength(rewritten),url:r.url}));
     res.writeHead(200,{...cors,'content-type':'application/vnd.apple.mpegurl; charset=utf-8','cache-control':'no-store'});
     return res.end(rewritten);
   }
