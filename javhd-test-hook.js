@@ -5,7 +5,7 @@ const avProxySessions=new Map();
 async function avResolveSession(id){
   const geo=await fetch('https://files.iw01.xyz/edge/geo.js?json',{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(15000)
+    signal:AbortSignal.timeout(60000)
   });
   if(!geo.ok)throw Error('AV01 geo '+geo.status);
   const g=await geo.json();
@@ -37,7 +37,7 @@ function avSession(id){
 async function avFetchText(url,s){
   const r=await fetch(avSigned(url,s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
-    signal:AbortSignal.timeout(20000)
+    signal:AbortSignal.timeout(45000)
   });
   if(!r.ok)throw Error('AV01 media '+r.status);
   return {text:await r.text(),url:r.url};
@@ -83,12 +83,14 @@ async function avProxyTarget(req,res,id,target){
 }
 
 async function avMaster(req,res,id){
+  console.log('[AV01_MASTER_START]', JSON.stringify({id}));
   const s=await avSession(id);
   const master='https://www.av01.media/api/v1/videos/'+id+'/manifest/index90-sv3-v1-a1.m3u8';
   const r=await fetch(avSigned(master,s),{
     headers:{'User-Agent':'Mozilla/5.0','Referer':AV+'/'},
     signal:AbortSignal.timeout(20000)
   });
+  console.log('[AV01_MASTER_UPSTREAM]', JSON.stringify({id,status:r.status,url:r.url}));
   if(!r.ok)throw Error('AV01 manifest '+r.status);
   const text=await r.text();
   const rewritten=avRewritePlaylist(text,r.url,id);
