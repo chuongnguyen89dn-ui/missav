@@ -94,6 +94,42 @@ async function fetchUpstream(id, target, force = false) {
   });
 }
 
+async function avDirectMaster(req, res, id) {
+  const s = await getSession(id);
+  const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
+  let r = await fetch(signUrl(master, s), {
+    headers: upstreamHeaders(),
+    signal: AbortSignal.timeout(6000)
+  });
+  if ([502, 503, 504].includes(r.status)) {
+    const s2 = await getSession(id, true);
+    r = await fetch(signUrl(master, s2), {
+      headers: upstreamHeaders(),
+      signal: AbortSignal.timeout(6000)
+    });
+  }
+  if (!r.ok) throw new Error(`AV01 direct manifest ${r.status}`);
+  const text = await r.text();
+  const base = r.url || master;
+  const direct = text.split(/\\r?\\n/).map(line => {
+    if (!line.trim()) return line;
+    return line.replace(/URI="([^"]+)"/g, (_, v) => {
+      const target = new URL(v, base).toString();
+      return `URI="${signUrl(target, s)}"`;
+    }).trim().startsWith('#') ? line.replace(/URI="([^"]+)"/g, (_, v) => {
+      const target = new URL(v, base).toString();
+      return `URI="${signUrl(target, s)}"`;
+    }) : signUrl(new URL(line.trim(), base).toString(), s);
+  }).join('\\n') + '\\n';
+  console.log('[AV01_DIRECT_MASTER]', JSON.stringify({ id, bytes: Buffer.byteLength(direct) }));
+  res.writeHead(200, {
+    ...cors,
+    'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
+    'cache-control': 'no-store'
+  });
+  return res.end(direct);
+}
+
 async function avMaster(req, res, id) {
   const s = await getSession(id);
   const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
@@ -253,12 +289,15 @@ http.createServer = function(handler, ...rest) {
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
         return send(res, { streams: [{
-          name: 'AV01 Native Stream',
-          title: `AV01 ${m[1]} · native stream`,
-          url: `https://missav-uimx.onrender.com/av01/${m[1]}/master.m3u8`,
+          name: 'AV01 Direct CDN HLS',
+          title: `AV01 ${m[1]} · direct CDN segments`,
+          url: `https://missav-uimx.onrender.com/av01/${m[1]}/direct.m3u8`,
           behaviorHints: { filename: 'av01.m3u8' }
         }] });
       }
+
+      m = path.match(/^\/av01\/(\d+)\/direct\.m3u8$/);
+      if (m) return await avDirectMaster(req, res, Number(m[1]));
 
       m = path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
       if (m) return await avMaster(req, res, Number(m[1]));
