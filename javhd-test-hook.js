@@ -1,6 +1,28 @@
+import { chromium } from 'playwright';
 import http from 'node:http';
 const originalCreateServer=http.createServer.bind(http);const AV='https://www.av01.media';const cors={'access-control-allow-origin':'*','access-control-allow-methods':'GET, HEAD, OPTIONS','access-control-allow-headers':'*'};let cache={at:0,items:[]};
 const avProxySessions=new Map();
+let avBrowserPromise=null;
+async function avBrowser(){
+  if(!avBrowserPromise) avBrowserPromise=chromium.launch({headless:true});
+  return avBrowserPromise;
+}
+async function avBrowserFetch(url,id){
+  const browser=await avBrowser();
+  const context=await browser.newContext({
+    userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+    extraHTTPHeaders:{Referer:AV+'/'}
+  });
+  try{
+    const response=await context.request.get(url,{timeout:60000});
+    const body=await response.body();
+    console.log('[AV01_BROWSER_FETCH]',JSON.stringify({id,status:response.status(),bytes:body.length,url}));
+    return {status:response.status(),headers:response.headers(),body};
+  }finally{
+    await context.close();
+  }
+}
+
 
 async function avResolveSession(id){
   const geo=await fetch('https://files.iw01.xyz/edge/geo.js?json',{
@@ -67,27 +89,19 @@ async function avProxyTarget(req,res,id,target){
   // Playwright is used only to refresh the signed session when needed.
   console.log('[AV01_MEDIA_PROXY]', JSON.stringify({id, path:u.pathname}));
   console.log('[AV01_UPSTREAM_START]',JSON.stringify({id,host:u.hostname,path:u.pathname}));
-  const r=await fetch(avSigned(u.toString(),s),{
-    headers:{
-      'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
-      'Referer':AV+'/',
-      'sec-ch-ua-platform':'"Windows"',
-      'sec-ch-ua':'"Not=A?Brand";v="99", "HeadlessChrome";v="151", "Chromium";v="151"',
-      'sec-ch-ua-mobile':'?0'
-    },
-    signal:AbortSignal.timeout(60000)
-  });
-  console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers.get('content-type')||'',url:r.url}));
-  if(!r.ok){
-    const detail=await r.text().catch(()=> '');
+  const r=await avBrowserFetch(avSigned(u.toString(),s),id);
+  const rStatus=r.status;
+  console.log('[AV01_UPSTREAM_RESULT]',JSON.stringify({id,status:r.status,type:r.headers['content-type']||'',url:u.toString()}));
+  if(rStatus!==200){
+    const detail=Buffer.from(r.body).toString('utf8');
     console.error('[AV01_UPSTREAM_ERROR]',JSON.stringify({id,status:r.status,detail:detail.slice(0,500)}));
     res.writeHead(r.status,{...cors,'content-type':'text/plain; charset=utf-8','cache-control':'no-store'});
     return res.end('AV01 upstream '+r.status+'\n');
   }
 
-  const type=r.headers.get('content-type')||'application/octet-stream';
+  const type=r.headers['content-type']||'application/octet-stream';
   if(type.includes('mpegurl')||u.pathname.endsWith('.m3u8')){
-    const text=await r.text();
+    const text=Buffer.from(r.body).toString('utf8');
     const rewritten=avRewritePlaylist(text,r.url,id);
     console.log('[AV01_CHILD_PLAYLIST]',JSON.stringify({id,bytes:Buffer.byteLength(rewritten),url:r.url}));
     res.writeHead(200,{...cors,'content-type':'application/vnd.apple.mpegurl; charset=utf-8','cache-control':'no-store'});
@@ -96,7 +110,7 @@ async function avProxyTarget(req,res,id,target){
 
   res.writeHead(200,{...cors,'content-type':type,'cache-control':'no-store'});
   if(req.method==='HEAD')return res.end();
-  for await(const chunk of r.body)res.write(chunk);
+  res.end(r.body);
   return res.end();
 }
 
