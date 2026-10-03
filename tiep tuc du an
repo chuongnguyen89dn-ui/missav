@@ -10,3 +10,16 @@ CAP NHAT 2026-10-02
 - Render service hien co: missav, Docker, free plan, URL https://missav-uimx.onrender.com.
 - Milestone tiep theo phai xac minh /health, /manifest.json, catalog/meta/stream, sau do test Nuvio playback + seek + sustained playback truoc khi mo rong crawler.
 - Day la handoff dau tien cua repo; khong copy handoff tu XemXiec.
+
+CAP NHAT 2026-10-03 — AV01 1080P RESOLVER DA XAC NHAN PHAT DUOC
+- Trang test: https://www.av01.media/vn/video/221078/ipzz-967-lada
+- Ket qua master AV01: sv1=360p, sv2=720p, sv3=1920x1080. Nhan 4K tren trang khong dong nghia stream 4K; manifest thuc te cua mau test cao nhat la 1080p.
+- Huong resolve DA THANH CONG: page AV01 -> kich hoat player/browser network -> bat /api/v1/videos/<id>/manifest/master.m3u8 -> chon index90-sv3-v1-a1.m3u8 -> quan sat request CDN customers.iw01.xyz -> lay access_token hien hanh -> rewrite playlist sv3 thanh playlist HLS truc tiep.
+- Playlist sv3 goc chua du de phat ngoai AV01. Cac fMP4 media gom init-sv3-v1-a1.mp4 va file90-N-sv3-v1-a1.m4s tren customers.iw01.xyz can duoc gan ?access_token=<TOKEN> hien hanh.
+- Diagnostic da xac nhan khi thieu access_token CDN tra 403. Sau khi gan access_token dung, init.mp4 va fragment .m4s tra HTTP 200.
+- Buoc cuoi da xac nhan thanh cong: xuat av01_1080_direct.m3u8 voi URL CDN signed truc tiep cho EXT-X-MAP va toan bo .m4s. User da test va xac nhan playlist nay PHAT DUOC tren VLC.
+- Cong thuc chot: AV01 page -> sv3 1080p -> capture access_token -> signed customers.iw01.xyz fMP4 playlist -> playback.
+- Khong can proxy video qua Render/Python de phat. Playlist direct signed da phat duoc.
+- access_token co thoi han va co rang buoc session/IP trong token; khong coi URL CDN da signed la URL co dinh. Resolver phai lay token moi khi resolve video moi/het han.
+- Script test thanh cong trong phien lam viec: av01_export_1080_direct.py. Script bat sv3 + access_token, rewrite thanh av01_1080_direct.m3u8, probe init/fragment, va playlist ket qua da duoc user xac nhan playback.
+- CAC HUONG DA THU NHUNG KHONG PHAI HUONG CHOT: dua thang AV01 API m3u8 vao VLC; chi them Referer nhu MissAV; local bridge/rewrite /media. Huong chot la signed direct CDN playlist.
