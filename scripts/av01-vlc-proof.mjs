@@ -97,11 +97,25 @@ const signed = rewriteM3U8(mediaText, mediaURL, token);
 const file = path.join(os.tmpdir(), `av01-${VIDEO_ID}-signed-${Date.now()}.m3u8`);
 await fs.writeFile(file, signed, "utf8");
 
-// Preflight the first CDN object so a 403 is caught before VLC starts.
-const firstObject = signed.split(/\\r?\\n/)
-  .map(x => x.trim())
-  .find(x => x && !x.startsWith("#") && x.includes("iw01.xyz"));
-if (!firstObject) throw new Error("Không tìm thấy CDN object đã ký trong media playlist");
+// Preflight the first CDN object. Media playlists commonly use relative
+// init/segment paths, so resolve them against the media-playlist URL first.
+const candidateLines = signed.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
+let firstObject = null;
+for (const line of candidateLines) {
+  if (line.startsWith("#EXT-X-MAP:")) {
+    const m = line.match(/URI="([^"]+)"/);
+    if (m) {
+      firstObject = sign(new URL(m[1], mediaURL), token);
+      break;
+    }
+  }
+  if (!line.startsWith("#")) {
+    firstObject = sign(new URL(line, mediaURL), token);
+    break;
+  }
+}
+if (!firstObject) throw new Error("Không tìm thấy init/segment trong media playlist");
+
 const firstObjectResponse = await fetch(firstObject, {
   headers: { "User-Agent": UA, Referer: BASE + "/" }
 });
