@@ -97,31 +97,45 @@ const signed = rewriteM3U8(mediaText, mediaURL, token);
 const file = path.join(os.tmpdir(), `av01-${VIDEO_ID}-signed-${Date.now()}.m3u8`);
 await fs.writeFile(file, signed, "utf8");
 
-// Preflight the first CDN object. Media playlists commonly use relative
-// init/segment paths, so resolve them against the media-playlist URL first.
-const candidateLines = signed.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
+// Preflight the first CDN object. Do not assume a specific HLS tag shape:
+// inspect URI attributes and plain segment lines after resolving them.
+const mediaLines = mediaText.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
 let firstObject = null;
-for (const line of candidateLines) {
-  if (line.startsWith("#EXT-X-MAP:")) {
-    const m = line.match(/URI="([^"]+)"/);
-    if (m) {
-      firstObject = sign(new URL(m[1], mediaURL), token);
+for (const line of mediaLines) {
+  const uriMatches = [...line.matchAll(/URI="([^"]+)"/g)];
+  for (const m of uriMatches) {
+    const u = new URL(m[1], mediaURL);
+    if (u.hostname.includes("iw01.xyz") || u.hostname.includes("av01.media")) {
+      firstObject = sign(u, token);
       break;
     }
   }
+  if (firstObject) break;
+
   if (!line.startsWith("#")) {
-    firstObject = sign(new URL(line, mediaURL), token);
+    const u = new URL(line, mediaURL);
+    firstObject = sign(u, token);
     break;
   }
 }
-if (!firstObject) throw new Error("Không tìm thấy init/segment trong media playlist");
+if (!firstObject) {
+  const diagnostic = path.join(os.tmpdir(), `av01-${VIDEO_ID}-media-playlist-${Date.now()}.txt`);
+  await fs.writeFile(diagnostic, mediaText, "utf8");
+  console.log("media playlist URL:", mediaURL.toString());
+  console.log("media playlist bytes:", Buffer.byteLength(mediaText, "utf8"));
+  console.log("media playlist first lines:");
+  console.log(mediaLines.slice(0, 25).join("\n"));
+  console.log("saved media playlist:", diagnostic);
+  throw new Error("Media playlist không chứa URI/segment có thể resolve");
+}
 
 const firstObjectResponse = await fetch(firstObject, {
   headers: { "User-Agent": UA, Referer: BASE + "/" }
 });
 console.log("first CDN object HTTP:", firstObjectResponse.status);
 if (!firstObjectResponse.ok) {
-  throw new Error("CDN object preflight HTTP " + firstObjectResponse.status);
+  const body = await firstObjectResponse.text();
+  throw new Error("CDN object preflight HTTP " + firstObjectResponse.status + ": " + body.slice(0,200));
 }
 console.log("AV01 VLC proof");
 console.log("video:", VIDEO_ID);
