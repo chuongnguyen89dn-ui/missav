@@ -85,6 +85,31 @@ if (!vlc) {
 }
 
 console.log("\nĐang mở VLC...");
-const p = spawnSync(vlc, ["--no-video-title-show", "--play-and-exit", file], {stdio:"inherit"});
+const out = path.join(os.tmpdir(), `av01-${VIDEO_ID}-vlc-proof-${Date.now()}.mp4`);
+const log = path.join(os.tmpdir(), `av01-${VIDEO_ID}-vlc-proof-${Date.now()}.log`);
+const args = [
+  "--intf", "dummy",
+  "--no-video-title-show",
+  "--verbose=2",
+  "--run-time=15",
+  "--play-and-exit",
+  "--sout", `#transcode{vcodec=h264,acodec=mp4a}:std{access=file,mux=mp4,dst=${out}}`,
+  file
+];
+const p = spawnSync(vlc, args, {encoding:"utf8"});
+await fs.writeFile(log, (p.stdout || "") + "\n" + (p.stderr || ""), "utf8");
+const stat = await fs.stat(out).catch(() => null);
 console.log("\nVLC exit code:", p.status);
-if (p.status !== 0) process.exitCode = p.status ?? 1;
+console.log("proof output:", out);
+console.log("proof bytes:", stat?.size ?? 0);
+console.log("VLC log:", log);
+
+if (p.status !== 0 || !stat || stat.size < 100000) {
+  console.log("\nPLAYBACK PROOF: FAIL");
+  console.log("Không coi exit code là bằng chứng playback.");
+  console.log("Xem log:", log);
+  process.exitCode = 1;
+} else {
+  console.log("\nPLAYBACK PROOF: PASS");
+  console.log("VLC đã decode/transcode được HLS thành MP4 trong 15 giây.");
+}
