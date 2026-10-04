@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -51,7 +52,7 @@ function findVlc() {
     "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
   ].filter(Boolean);
   return candidates.find(p => {
-    try { return require("node:fs").existsSync(p); } catch { return false; }
+    return existsSync(p);
   });
 }
 
