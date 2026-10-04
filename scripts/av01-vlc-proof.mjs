@@ -152,32 +152,21 @@ if (!vlc) {
   process.exit(2);
 }
 
-console.log("\nĐang mở VLC...");
-const out = path.join(os.tmpdir(), `av01-${VIDEO_ID}-vlc-proof-${Date.now()}.mp4`);
-const log = path.join(os.tmpdir(), `av01-${VIDEO_ID}-vlc-proof-${Date.now()}.log`);
+console.log("\nĐang mở VLC GUI để phát trực tiếp video", VIDEO_ID, "...");
+console.log("Đóng VLC khi bạn kiểm tra xong.");
+
+// Open the real VLC window. Do not use dummy interface, transcode output,
+// run-time limit, or play-and-exit: the purpose of this test is visual proof
+// that the signed AV01 HLS actually plays on screen.
 const args = [
-  "--intf", "dummy",
   "--no-video-title-show",
-  "--verbose=2",
-  "--run-time=15",
-  "--play-and-exit",
-  "--sout", `#transcode{vcodec=h264,acodec=mp4a}:std{access=file,mux=mp4,dst=${out}}`,
+  "--http-user-agent", UA,
+  "--http-referrer", BASE + "/",
   file
 ];
-const p = spawnSync(vlc, args, {encoding:"utf8"});
-await fs.writeFile(log, (p.stdout || "") + "\n" + (p.stderr || ""), "utf8");
-const stat = await fs.stat(out).catch(() => null);
+const p = spawnSync(vlc, args, {stdio:"inherit"});
 console.log("\nVLC exit code:", p.status);
-console.log("proof output:", out);
-console.log("proof bytes:", stat?.size ?? 0);
-console.log("VLC log:", log);
-
-if (p.status !== 0 || !stat || stat.size < 100000) {
-  console.log("\nPLAYBACK PROOF: FAIL");
-  console.log("Không coi exit code là bằng chứng playback.");
-  console.log("Xem log:", log);
+if (p.error) {
+  console.error("Không mở được VLC:", p.error.message);
   process.exitCode = 1;
-} else {
-  console.log("\nPLAYBACK PROOF: PASS");
-  console.log("VLC đã decode/transcode được HLS thành MP4 trong 15 giây.");
 }
