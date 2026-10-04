@@ -66,12 +66,12 @@ if (!mr.ok) throw new Error("master HTTP " + mr.status);
 const masterText = await mr.text();
 
 function chooseVariant(masterText, baseURL) {
-  const lines = masterText.split(/\\r?\\n/);
+  const lines = masterText.split(/\r?\n/);
   let best = null;
   let bandwidth = 0;
   for (const line of lines) {
     if (line.startsWith("#EXT-X-STREAM-INF:")) {
-      const m = line.match(/(?:^|,)BANDWIDTH=(\\d+)/);
+      const m = line.match(/(?:^|,)BANDWIDTH=(\d+)/);
       bandwidth = m ? Number(m[1]) : 0;
       continue;
     }
@@ -99,7 +99,7 @@ await fs.writeFile(file, signed, "utf8");
 
 // Preflight the first CDN object. Do not assume a specific HLS tag shape:
 // inspect URI attributes and plain segment lines after resolving them.
-const mediaLines = mediaText.split(/\\r?\\n/).map(x => x.trim()).filter(Boolean);
+const mediaLines = mediaText.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
 let firstObject = null;
 for (const line of mediaLines) {
   const uriMatches = [...line.matchAll(/URI="([^"]+)"/g)];
