@@ -339,7 +339,7 @@ def publish_batch(repo_root, accepted, run_id):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--count", type=int, default=0, help="0 = scan all Hottest pages")
-    ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--tag-wait", type=float, default=4.0)
     ap.add_argument("--resolve-wait", type=float, default=12.0)
     ap.add_argument("--out", default="av01_hottest_filtered_20")
@@ -408,8 +408,8 @@ def main():
                     except Exception as e:
                         job["resolve_tries"] += 1
                         msg = repr(e)
-                        if job["resolve_tries"] <= 3:
-                            delay = 15 * job["resolve_tries"]
+                        if "429" in msg or job["resolve_tries"] <= 3:
+                            delay = min(120, 15 * job["resolve_tries"])
                             job["retry_at"] = time.time() + delay
                             print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
                         else:
