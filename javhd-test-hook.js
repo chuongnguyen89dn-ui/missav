@@ -1,5 +1,15 @@
 import http from 'node:http';
 import { Readable } from 'node:stream';
+import { readFileSync } from 'node:fs';
+
+let filteredCatalog={movies:[]};
+try{filteredCatalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',import.meta.url),'utf8'));}catch{}
+const filteredMovies=Array.isArray(filteredCatalog)?filteredCatalog:(filteredCatalog.movies||[]);
+const filteredById=new Map(filteredMovies.map(x=>[String(x.id),x]));
+function filteredMeta(x){
+  const tags=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:(v?.name||v?.title||'')).filter(Boolean);
+  return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
+}
 
 const originalCreateServer = http.createServer.bind(http);
 const AV = 'https://www.av01.media';
@@ -271,7 +281,7 @@ http.createServer = function(handler, ...rest) {
       if (path === '/manifest.json') {
         return send(res, {
           id: 'community.missav.hls.test',
-          version: '0.6.0-av01-native-stream',
+          version: '0.6.1-av01-native-stream',
           name: 'MissAV 1080p',
           description: 'Original MissAV + original IkiSoda + AV01 lightweight native streaming proxy',
           resources: ['catalog', 'meta', 'stream'],
@@ -279,12 +289,14 @@ http.createServer = function(handler, ...rest) {
           catalogs: [
             { type: 'movie', id: 'missav-1080', name: 'MissAV · Verified 1080p' },
             { type: 'movie', id: 'ikisoda', name: 'ikisoda' },
-            { type: 'movie', id: 'av01-test', name: 'Test AV01' }
+            { type: 'movie', id: 'av01-test', name: 'Test AV01' },
+            { type: 'movie', id: 'av01-filtered', name: 'AV01 · Hottest · Filtered 1080p' }
           ],
           idPrefixes: ['missav:', 'ikisoda:', 'av01:']
         });
       }
       if (path === '/catalog/movie/av01-test.json') return send(res, { metas: (await items()).map(meta) });
+      if (path === '/catalog/movie/av01-filtered.json') return send(res, { metas: filteredMovies.map(filteredMeta) });
 
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
@@ -307,6 +319,8 @@ http.createServer = function(handler, ...rest) {
 
       m = path.match(/^\/meta\/movie\/av01:(\d+)\.json$/);
       if (m) {
+        const fx = filteredById.get(m[1]);
+        if (fx) return send(res, { meta: filteredMeta(fx) });
         const x = (await items()).find(v => String(v.id) === m[1]);
         return x ? send(res, { meta: meta(x) }) : send(res, { error: 'Not found' }, 404);
       }
