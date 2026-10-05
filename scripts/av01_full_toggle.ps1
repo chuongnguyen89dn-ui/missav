@@ -16,7 +16,7 @@ $HOTKEY=1
 $WM_HOTKEY=0x0312
 $PM_REMOVE=1
 # Ctrl+Alt+F9 is system-wide, so it can restore the console after it is hidden.
-if(-not [AV01Window]::RegisterHotKey($hwnd,$HOTKEY,3,0x78)){ throw "Cannot register Ctrl+Alt+F9" }
+if(-not [AV01Window]::RegisterHotKey([IntPtr]::Zero,$HOTKEY,3,0x78)){ throw "Cannot register Ctrl+Alt+F9" }
 $hidden=$false
 Write-Host "Ctrl+Alt+F9 = hide/show CMD (global hotkey). Ctrl+C = stop."
 $job=Start-Job -ScriptBlock {
@@ -28,7 +28,7 @@ $job=Start-Job -ScriptBlock {
 try {
   while($job.State -eq "Running"){
     $msg=New-Object AV01Window+MSG
-    if([AV01Window]::PeekMessage([ref]$msg,$hwnd,$WM_HOTKEY,$WM_HOTKEY,$PM_REMOVE)){
+    if([AV01Window]::PeekMessage([ref]$msg,[IntPtr]::Zero,$WM_HOTKEY,$WM_HOTKEY,$PM_REMOVE)){
       $hidden=-not $hidden
       [AV01Window]::ShowWindow($hwnd, $(if($hidden){0}else{5})) | Out-Null
     }
@@ -38,7 +38,7 @@ try {
   Receive-Job $job
   $code=if($job.State -eq "Completed"){0}else{1}
 } finally {
-  [AV01Window]::UnregisterHotKey($hwnd,$HOTKEY) | Out-Null
+  [AV01Window]::UnregisterHotKey([IntPtr]::Zero,$HOTKEY) | Out-Null
   Remove-Job $job -Force -ErrorAction SilentlyContinue
 }
 exit $code
