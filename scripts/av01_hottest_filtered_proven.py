@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 import requests
 
-HOT = "https://www.av01.media/vn/videos/hottest"
+HOT = "https://www.av01.media/en/videos/hottest"
 
 # Large-breast related tags. "Beautiful Tits" is included because AV01 currently uses it
 # on titles that otherwise may not carry literal "Big Tits".
