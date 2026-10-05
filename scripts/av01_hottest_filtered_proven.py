@@ -90,65 +90,48 @@ def cards(pg):
     }""")
 
 def load_more_cards(pg, current_count):
-    """Perform the same in-page Load More action that produced page=2 HTTP 200 in the manual probe."""
-    before = current_count
+    """Load the next Hottest API page inside the live browser session and merge its video URLs."""
+    page = current_count // 20 + 1
+    api = f"/api/v1/videos/types/hottest?page={page}&limit=20"
+    print(f"[LOAD MORE API] page={page}", flush=True)
     try:
-        pg.bring_to_front()
-        pg.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        pg.wait_for_timeout(800)
-
-        # Click the actual visible control in the rendered page. Prefer a control whose
-        # click triggers the Hottest API; fall back to the lowest visible button/link.
-        controls = pg.locator("button:visible, [role=button]:visible, a:visible")
-        chosen = None
-        for i in range(controls.count()-1, -1, -1):
-            el = controls.nth(i)
-            try:
-                txt = " ".join(filter(None, [
-                    (el.inner_text(timeout=250) or "").strip(),
-                    (el.get_attribute("aria-label") or "").strip(),
-                    (el.get_attribute("title") or "").strip()
-                ]))
-                if re.search(r"(load\\s*more|xem\\s*thêm|tải\\s*thêm|thêm)", txt, re.I):
-                    chosen = el
-                    print(f"[LOAD MORE CLICK] control={txt!r}", flush=True)
-                    break
-            except Exception:
-                pass
-
-        if chosen is None:
-            # AV01 may render the control without text; use the lowest visible button-like
-            # element near the bottom of the Hottest list, matching the manual click.
-            candidates=[]
-            for i in range(controls.count()):
-                el=controls.nth(i)
-                try:
-                    box=el.bounding_box()
-                    if box and box["y"] > 500:
-                        candidates.append((box["y"],el))
-                except Exception:
-                    pass
-            if candidates:
-                candidates.sort(key=lambda x:x[0])
-                chosen=candidates[-1][1]
-                print("[LOAD MORE CLICK] using lowest visible control", flush=True)
-
-        if chosen is None:
-            print("[LOAD MORE CLICK] control not found", flush=True)
+        data = pg.evaluate("""async (u) => {
+          const r = await fetch(u, {credentials:'include', headers:{'accept':'application/json'}});
+          const text = await r.text();
+          return {status:r.status, text};
+        }""", api)
+        if data.get("status") == 429:
+            print("[LOAD MORE API] 429; keep waiting", flush=True)
             return cards(pg)
-
-        chosen.scroll_into_view_if_needed(timeout=2000)
-        chosen.click(force=True, timeout=3000)
-        for _ in range(30):
-            pg.wait_for_timeout(400)
-            now=cards(pg)
-            if len(now)>before:
-                print(f"[LOAD MORE CLICK] {before} -> {len(now)}", flush=True)
-                return now
-        print("[LOAD MORE CLICK] clicked but list did not grow", flush=True)
+        if data.get("status") != 200:
+            print(f"[LOAD MORE API] HTTP {data.get('status')}", flush=True)
+            return cards(pg)
+        payload = json.loads(data.get("text") or "{}")
+        items = payload.get("data", payload)
+        if isinstance(items, dict):
+            for k in ("videos","items","results","data"):
+                if isinstance(items.get(k), list):
+                    items = items[k]; break
+        if not isinstance(items, list):
+            print("[LOAD MORE API] unexpected payload", flush=True)
+            return cards(pg)
+        added = pg.evaluate("""(items)=>{
+          const root=document.createElement('div'); root.id='av01-scanner-extra'; root.style.display='none';
+          for(const v of items){
+            const id=String(v.id||v.video_id||v.videoId||'');
+            if(!id) continue;
+            const slug=String(v.slug||v.code||v.title||id).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+            const a=document.createElement('a'); a.href='/en/video/'+id+'/'+slug; a.textContent=String(v.code||v.title||id);
+            root.appendChild(a);
+          }
+          document.body.appendChild(root); return root.querySelectorAll('a').length;
+        }""", items)
+        now=cards(pg)
+        print(f"[LOAD MORE API] items={len(items)} merged={len(now)}", flush=True)
+        return now
     except Exception as e:
-        print(f"[LOAD MORE CLICK] failed: {e!r}", flush=True)
-    return cards(pg)
+        print(f"[LOAD MORE API] failed: {e!r}", flush=True)
+        return cards(pg)
 
 def read_meta(pg, c):
     d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
@@ -464,9 +447,9 @@ def main():
                 else:
                     no_growth += 1
                     print(f"[LOAD MORE] no growth ({no_growth}/3)", flush=True)
-                    if no_growth >= 3:
-                        print("[STOP] Hottest has no more visible candidates.", flush=True)
-                        break
+                    delay = min(120, 15 * no_growth)
+                    print(f"[LOAD MORE WAIT] retry in {delay}s; not treating no-growth as end-of-site", flush=True)
+                    time.sleep(delay)
 
             # Keep resolver queue filled, but don't schedule more than needed.
             needed = (a.count - len(accepted) - len(resolvers)) if a.count > 0 else a.workers
