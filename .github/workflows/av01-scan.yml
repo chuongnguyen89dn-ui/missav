@@ -14,6 +14,8 @@ jobs:
           node-version: '22'
       - name: Start clean batch
         run: rm -f data/av01-progress.json data/av01-catalog.json
+      - name: Validate scanner syntax
+        run: node --check scripts/av01-scan.mjs
       - name: Scan until exactly 20 filtered valid movies
         id: scan
         continue-on-error: true
