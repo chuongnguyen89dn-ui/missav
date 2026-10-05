@@ -8,7 +8,7 @@ const filteredMovies=Array.isArray(filteredCatalog)?filteredCatalog:(filteredCat
 const filteredById=new Map(filteredMovies.map(x=>[String(x.id),x]));
 function filteredMeta(x){
   const tags=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:(v?.name||v?.title||'')).filter(Boolean);
-  return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:(x.poster_stable||x.thumbnail||`https://www.av01.media/media/videos/tmb/${x.id}/1.jpg`),background:(x.poster_stable||x.thumbnail||`https://www.av01.media/media/videos/tmb/${x.id}/1.jpg`),posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
+  return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:`https://missav-uimx.onrender.com/av01/${x.id}/poster.jpg`,background:`https://missav-uimx.onrender.com/av01/${x.id}/poster.jpg`,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
 }
 
 const originalCreateServer = http.createServer.bind(http);
@@ -281,7 +281,7 @@ http.createServer = function(handler, ...rest) {
       if (path === '/manifest.json') {
         return send(res, {
           id: 'community.missav.hls.test',
-          version: '0.6.2-av01-native-stream',
+          version: '0.6.3-av01-native-stream',
           name: 'MissAV 1080p',
           description: 'Original MissAV + original IkiSoda + AV01 lightweight native streaming proxy',
           resources: ['catalog', 'meta', 'stream'],
@@ -306,6 +306,25 @@ http.createServer = function(handler, ...rest) {
           url: `https://missav-uimx.onrender.com/av01/${m[1]}/master.m3u8`,
           behaviorHints: { filename: 'av01.m3u8' }
         }] });
+      }
+
+      m = path.match(/^\/av01\/(\d+)\/poster\.jpg$/);
+      if (m) {
+        const id=m[1];
+        const candidates=[
+          `${AV}/media/videos/tmb/${id}/1.jpg`,
+          `https://files.iw01.xyz/covers/${id}/800.webp`
+        ];
+        for (const u of candidates) {
+          try {
+            const r=await fetch(u,{headers:{'User-Agent':UA,'Accept':'image/avif,image/webp,image/apng,image/*,*/*;q=0.8','Referer':`${AV}/en/video/${id}/`},redirect:'follow',signal:AbortSignal.timeout(8000)});
+            if (!r.ok) continue;
+            const b=Buffer.from(await r.arrayBuffer());
+            res.writeHead(200,{...cors,'content-type':r.headers.get('content-type')||'image/jpeg','content-length':b.length,'cache-control':'public, max-age=86400'});
+            return res.end(b);
+          } catch {}
+        }
+        res.writeHead(404,{...cors,'content-type':'text/plain'}); return res.end('poster unavailable');
       }
 
       m = path.match(/^\/av01\/(\d+)\/master\.m3u8$/);
