@@ -1,6 +1,9 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+chcp 65001 >nul
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
 title AV01 FULL SITE SCANNER
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\av01_full_toggle.ps1"
 set "RC=%ERRORLEVEL%"
