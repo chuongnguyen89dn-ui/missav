@@ -11,6 +11,9 @@ public static class AV01Window {
   public struct MSG { public IntPtr hwnd; public uint message; public UIntPtr wParam; public IntPtr lParam; public uint time; public POINT pt; }
 }
 "@
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$env:PYTHONUTF8="1"
+$env:PYTHONIOENCODING="utf-8"
 $hwnd=[AV01Window]::GetConsoleWindow()
 $HOTKEY=1
 $WM_HOTKEY=0x0312
