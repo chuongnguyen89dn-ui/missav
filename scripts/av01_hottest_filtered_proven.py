@@ -339,7 +339,7 @@ def publish_batch(repo_root, accepted, run_id):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--count", type=int, default=0, help="0 = scan all Hottest pages")
-    ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--tag-wait", type=float, default=4.0)
     ap.add_argument("--resolve-wait", type=float, default=12.0)
     ap.add_argument("--out", default="av01_hottest_filtered_20")
@@ -409,12 +409,14 @@ def main():
                         job["resolve_tries"] += 1
                         msg = repr(e)
                         if job["resolve_tries"] <= 3:
-                            delay = 4 * job["resolve_tries"]
+                            delay = 15 * job["resolve_tries"]
                             job["retry_at"] = time.time() + delay
                             print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
                         else:
-                            skipped.append({"url":job["m"]["url"],"code":job["m"]["code"],
+                            skipped.append({"id":job["m"]["id"],"url":job["m"]["url"],"code":job["m"]["code"],
                                             "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
+                            processed_ids.add(job["m"]["id"])
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
                             print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
                             job["ctx"].close(); resolvers.remove(job)
                 elif not (cap["sv"] and cap["token"]) and time.time() >= job["deadline"]:
@@ -499,8 +501,11 @@ def main():
                         ctx.close()
                     elif block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
-                                        "official_tags":m["official_tags"],
+                                        "official_tags":m["official_tags"],"year":year,
                                         "reason":"BLOCK "+",".join(block)})
+                        processed_ids.add(m["id"])
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                        print(f"  -> BLOCKED {m['code']} {block}", flush=True)
                         ctx.close()
                     else:
                         m["poster_file"] = download_poster(m, out)
