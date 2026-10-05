@@ -26,11 +26,11 @@ KEEP = [
 
 # Hard blocks are evaluated ONLY against official #tags of the current video.
 BLOCK = [
-    ("Anal", r"^anal$"),
+    ("Anal", r"^(?:anal|hậu\\s*môn|lỗ\\s*nhị)$"),
     ("Toy/Sex Toys", r"^(?:toy|toys|sex\s*toy|sex\s*toys|dildo|dildos)$"),
     ("Cross Dressing", r"^(?:cross[\s-]*dressing|crossdresser|cross[\s-]*dresser)$"),
-    ("Lesbian/Gay", r"^(?:lesbian|gay)$"),
-    ("Shemale/Transsexual", r"^(?:shemale|transsexual|transgender)$"),
+    ("Lesbian/Gay", r"^(?:lesbian|gay|đồng\\s*tính\\s*nữ|đồng\\s*tính\\s*nam|bách\\s*hợp)$"),
+    ("Shemale/Transsexual", r"^(?:shemale|transsexual|transgender|chuyển\\s*giới|người\\s*chuyển\\s*giới)$"),
     ("Mature", r"^(?:mature|mature\s*woman|mother|milf)$"),
 ]
 
