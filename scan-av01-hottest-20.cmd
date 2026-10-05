@@ -1,12 +1,12 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo [1/2] AV01 Hottest - proven browser official-tag + 1080 resolver pipeline...
-python scripts\av01_hottest_filtered_proven.py --count 20 --out av01_hottest_filtered_20
+echo AV01 Hottest - FULL SITE scan: tags + 2024/2025/2026 + block filter + 1080 probe...
+python scripts\av01_hottest_filtered_proven.py --count 0 --out av01_hottest_full
 if errorlevel 1 (
   echo.
-  echo [STOP] Scanner/resolver failed. Nothing pushed.
+  echo [STOP] Full-site scanner failed.
   exit /b 1
 )
 echo.
-echo [2/2] Finished. Review av01_hottest_filtered_20\report.json
+echo [DONE] Full-site scan finished. Review av01_hottest_full\report.json
