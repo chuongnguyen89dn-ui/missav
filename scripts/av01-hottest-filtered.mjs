@@ -12,7 +12,24 @@ const seen=new Set(), accepted=new Set();
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function names(a){return (Array.isArray(a)?a:[]).map(x=>typeof x==="string"?x:(x?.name||x?.title||"")).filter(Boolean)}
 function yearOf(v){for(const k of ["published_time","uploaded_time","release_date","date","year"]){const m=String(v?.[k]??"").match(/20(?:24|25|26)/);if(m)return Number(m[0])}return null}
-function blob(v){return [...names(v?.tags),v?.title||"",v?.description||""].join(" ").toLowerCase()}
+function blob(v,html=""){
+ const api=[...names(v?.tags),...names(v?.genres),...names(v?.categories),...names(v?.labels),v?.title||"",v?.description||""];
+ const page=String(html||"")
+   .replace(/<script[\\s\\S]*?<\\/script>/gi," ")
+   .replace(/<style[\\s\\S]*?<\\/style>/gi," ")
+   .replace(/<[^>]+>/g," ")
+   .replace(/&nbsp;|&#160;/gi," ")
+   .replace(/&amp;/gi,"&")
+   .replace(/\\s+/g," ");
+ return (api.join(" ")+" "+page).toLowerCase();
+}
+async function detailHtml(context,id,href){
+ const candidates=[href,BASE+"/vn/video/"+id,BASE+"/en/video/"+id].filter(Boolean);
+ for(const u of [...new Set(candidates)]){
+  try{const r=await context.request.get(u,{headers:{Referer:START,Accept:"text/html,application/xhtml+xml"}});if(r.ok()){const t=await r.text();if(t.length>500)return t}}catch{}
+ }
+ return "";
+}
 async function save(){
  state.valid=state.movies.length;state.seen=[...seen];state.updated_at=new Date().toISOString();
  await fs.mkdir("data",{recursive:true});
@@ -38,7 +55,7 @@ async function collectLinks(page){
 async function processId(context,id,href){
  if(!id||seen.has(id)||state.movies.length>=TARGET)return;seen.add(id);state.scanned++;
  try{
-  const v=await metadata(context,id), y=yearOf(v), b=blob(v);
+  const v=await metadata(context,id), html=await detailHtml(context,id,href), y=yearOf(v), b=blob(v,html);
   let reason=null;
   if(!y||y<2024||y>2026){state.rejections.year++;reason="year"}
   else if(!include.some(x=>b.includes(x))){state.rejections.include++;reason="include"}
@@ -48,7 +65,7 @@ async function processId(context,id,href){
    accepted.add(id);
    state.movies.push({id,dvd_id:v.dvd_id||v.code||null,title:v.title||v.dvd_id||v.code||("AV01 "+id),description:v.description||null,duration:v.duration||null,published_time:v.published_time||null,uploaded_time:v.uploaded_time||null,maker:v.maker||null,actresses:v.actresses||[],tags:v.tags||[],cover:v.cover||v.poster||null,poster:v.cover||v.poster||`https://files.iw01.xyz/covers/${id}/800.webp`,year:y,quality:"1080p+",page_url:href||`${BASE}/vn/video/${id}`});
   }
-  console.log(JSON.stringify({id,result:reason||"ACCEPT",scanned:state.scanned,quality_checked:state.quality_checked,valid:state.movies.length,target:TARGET,rejections:state.rejections}));
+  console.log(JSON.stringify({id,result:reason||"ACCEPT",matched_include:include.filter(x=>b.includes(x)),matched_exclude:exclude.filter(x=>b.includes(x)),detail_html:html.length,scanned:state.scanned,quality_checked:state.quality_checked,valid:state.movies.length,target:TARGET,rejections:state.rejections}));
  }catch(e){state.rejections.error++;console.error("[ITEM]",id,e.message)}
  await save();
 }
