@@ -89,46 +89,65 @@ def cards(pg):
     }""")
 
 def load_more_cards(pg, current_count):
-    """Load next VN Hottest page using the exact API captured from a real Load More click."""
-    page_no = current_count // 20 + 1
-    api = f"https://www.av01.media/api/v1/videos/types/hottest?page={page_no}&limit=20"
+    """Perform the same in-page Load More action that produced page=2 HTTP 200 in the manual probe."""
+    before = current_count
     try:
-        ap = pg.context.new_page()
-        try:
-            r = ap.goto(api, wait_until="domcontentloaded", timeout=45000)
-            status = r.status if r else 0
-            if status == 429:
-                print(f"[LOAD MORE API] page={page_no} HTTP 429; cooldown 12s then retry", flush=True)
-                ap.wait_for_timeout(12000)
-                r = ap.reload(wait_until="domcontentloaded", timeout=45000)
-                status = r.status if r else 0
-            if status != 200:
-                raise RuntimeError(f"HTTP {status}")
-            raw = ap.locator("body").inner_text()
-            data = json.loads(raw)
-        finally:
-            ap.close()
-        vids = (data or {}).get("videos") or (data or {}).get("data") or []
-        if isinstance(vids, dict):
-            vids = vids.get("videos") or vids.get("items") or []
-        old = cards(pg)
-        seen, out = set(), []
-        for x in old:
-            m = re.search(r"/video/(\\d+)(?:/|$)", x.get("url",""))
-            if m: seen.add(m.group(1))
-            out.append(x)
-        for v in vids if isinstance(vids,list) else []:
-            vid = str(v.get("id") or v.get("video_id") or "")
-            if not vid or vid in seen: continue
-            slug = v.get("slug") or v.get("code") or ""
-            u = f"https://www.av01.media/vn/video/{vid}/" + (str(slug).strip("/") if slug else "")
-            out.append({"url":u,"text":v.get("title") or v.get("name") or "","poster":v.get("cover") or v.get("poster") or "","alt":""})
-            seen.add(vid)
-        print(f"[LOAD MORE API] page={page_no} HTTP 200 data={len(vids) if isinstance(vids,list) else 0}", flush=True)
-        return out
+        pg.bring_to_front()
+        pg.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        pg.wait_for_timeout(800)
+
+        # Click the actual visible control in the rendered page. Prefer a control whose
+        # click triggers the Hottest API; fall back to the lowest visible button/link.
+        controls = pg.locator("button:visible, [role=button]:visible, a:visible")
+        chosen = None
+        for i in range(controls.count()-1, -1, -1):
+            el = controls.nth(i)
+            try:
+                txt = " ".join(filter(None, [
+                    (el.inner_text(timeout=250) or "").strip(),
+                    (el.get_attribute("aria-label") or "").strip(),
+                    (el.get_attribute("title") or "").strip()
+                ]))
+                if re.search(r"(load\\s*more|xem\\s*thêm|tải\\s*thêm|thêm)", txt, re.I):
+                    chosen = el
+                    print(f"[LOAD MORE CLICK] control={txt!r}", flush=True)
+                    break
+            except Exception:
+                pass
+
+        if chosen is None:
+            # AV01 may render the control without text; use the lowest visible button-like
+            # element near the bottom of the Hottest list, matching the manual click.
+            candidates=[]
+            for i in range(controls.count()):
+                el=controls.nth(i)
+                try:
+                    box=el.bounding_box()
+                    if box and box["y"] > 500:
+                        candidates.append((box["y"],el))
+                except Exception:
+                    pass
+            if candidates:
+                candidates.sort(key=lambda x:x[0])
+                chosen=candidates[-1][1]
+                print("[LOAD MORE CLICK] using lowest visible control", flush=True)
+
+        if chosen is None:
+            print("[LOAD MORE CLICK] control not found", flush=True)
+            return cards(pg)
+
+        chosen.scroll_into_view_if_needed(timeout=2000)
+        chosen.click(force=True, timeout=3000)
+        for _ in range(30):
+            pg.wait_for_timeout(400)
+            now=cards(pg)
+            if len(now)>before:
+                print(f"[LOAD MORE CLICK] {before} -> {len(now)}", flush=True)
+                return now
+        print("[LOAD MORE CLICK] clicked but list did not grow", flush=True)
     except Exception as e:
-        print(f"[LOAD MORE API] page={page_no} failed: {e!r}", flush=True)
-        return cards(pg)
+        print(f"[LOAD MORE CLICK] failed: {e!r}", flush=True)
+    return cards(pg)
 
 def read_meta(pg, c):
     d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
