@@ -372,14 +372,22 @@ def main():
         lp = listctx.new_page()
         lp.goto(HOT, wait_until="domcontentloaded", timeout=45000)
         cs = []
-        for _ in range(16):
-            lp.wait_for_timeout(500)
-            cs = cards(lp)
+        list_try = 0
+        while not cs:
+            list_try += 1
+            for _ in range(16):
+                lp.wait_for_timeout(500)
+                cs = cards(lp)
+                if cs: break
+                try: lp.evaluate("window.scrollTo(0,document.body.scrollHeight)")
+                except Exception: pass
             if cs: break
-            try: lp.evaluate("window.scrollTo(0,document.body.scrollHeight)")
-            except Exception: pass
+            delay = min(120, 15 * list_try)
+            print(f"[LIST WAIT] no candidates; retry#{list_try} in {delay}s", flush=True)
+            time.sleep(delay)
+            try: lp.reload(wait_until="domcontentloaded", timeout=45000)
+            except Exception as e: print(f"[LIST WAIT] reload: {e!r}", flush=True)
         print(f"Candidates: {len(cs)} | resolver slots: {a.workers}", flush=True)
-        if not cs: raise RuntimeError("No /video/<id>/ candidates")
 
         next_i = 0
         resolvers = []
@@ -499,11 +507,15 @@ def main():
                     if not m["official_tags"]:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":[],"year":year,"reason":"official tags unavailable"})
+                        processed_ids.add(m["id"])
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
                         ctx.close()
                     elif year not in (2024, 2025, 2026):
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"year not 2024-2026" if year else "year unavailable"})
+                        processed_ids.add(m["id"])
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
                         ctx.close()
                     elif block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
