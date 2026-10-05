@@ -89,35 +89,42 @@ def cards(pg):
     }""")
 
 def load_more_cards(pg, current_count):
-    """Load the next VN Hottest batch through AV01's actual API discovered from the UI."""
+    """Load next VN Hottest page using the exact API captured from a real Load More click."""
     page_no = current_count // 20 + 1
     api = f"https://www.av01.media/api/v1/videos/types/hottest?page={page_no}&limit=20"
     try:
-        data = pg.evaluate("""async u => {
-          const r = await fetch(u, {credentials:'include'});
-          if(!r.ok) throw new Error('HTTP '+r.status);
-          return await r.json();
-        }""", api)
+        ap = pg.context.new_page()
+        try:
+            r = ap.goto(api, wait_until="domcontentloaded", timeout=45000)
+            status = r.status if r else 0
+            if status == 429:
+                print(f"[LOAD MORE API] page={page_no} HTTP 429; cooldown 12s then retry", flush=True)
+                ap.wait_for_timeout(12000)
+                r = ap.reload(wait_until="domcontentloaded", timeout=45000)
+                status = r.status if r else 0
+            if status != 200:
+                raise RuntimeError(f"HTTP {status}")
+            raw = ap.locator("body").inner_text()
+            data = json.loads(raw)
+        finally:
+            ap.close()
         vids = (data or {}).get("videos") or (data or {}).get("data") or []
         if isinstance(vids, dict):
             vids = vids.get("videos") or vids.get("items") or []
         old = cards(pg)
-        seen = set()
-        out = []
+        seen, out = set(), []
         for x in old:
             m = re.search(r"/video/(\\d+)(?:/|$)", x.get("url",""))
-            if m:
-                seen.add(m.group(1))
+            if m: seen.add(m.group(1))
             out.append(x)
-        for v in vids if isinstance(vids, list) else []:
+        for v in vids if isinstance(vids,list) else []:
             vid = str(v.get("id") or v.get("video_id") or "")
-            if not vid or vid in seen:
-                continue
+            if not vid or vid in seen: continue
             slug = v.get("slug") or v.get("code") or ""
             u = f"https://www.av01.media/vn/video/{vid}/" + (str(slug).strip("/") if slug else "")
             out.append({"url":u,"text":v.get("title") or v.get("name") or "","poster":v.get("cover") or v.get("poster") or "","alt":""})
             seen.add(vid)
-        print(f"[LOAD MORE API] page={page_no} HTTP data={len(vids) if isinstance(vids,list) else 0}", flush=True)
+        print(f"[LOAD MORE API] page={page_no} HTTP 200 data={len(vids) if isinstance(vids,list) else 0}", flush=True)
         return out
     except Exception as e:
         print(f"[LOAD MORE API] page={page_no} failed: {e!r}", flush=True)
@@ -385,10 +392,10 @@ def main():
                     block = block_hits(m["official_tags"])
                     print(f"[{idx}] {m['code']} tags={m['official_tags']}\n    keep={keep or '-'} block={block or '-'}", flush=True)
 
-                    if block or not keep:
+                    if block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],
-                                        "reason":("BLOCK "+",".join(block)) if block else "not large-breast related"})
+                                        "reason":"BLOCK "+",".join(block)})
                         ctx.close()
                     else:
                         m["poster_file"] = download_poster(m, out)
