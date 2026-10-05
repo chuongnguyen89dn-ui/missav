@@ -192,6 +192,7 @@ def read_meta(pg, c):
         "code": sm.group(1).split("-lada")[0].upper() if sm else "",
         "url": c["url"], "title": title, "description": desc,
         "poster": poster, "official_tags": tags,
+        "official_tag_refs": [{"name": normalize_tag(x["text"]), "href": x["href"], "id": (re.search(r"/tag/(\\d+)", x["href"]).group(1) if re.search(r"/tag/(\\d+)", x["href"]) else "")} for x in d["tagLinks"]],
         "extra_metadata": extra["extra"],
         "jsonld": extra["jsonlds"]
     }
