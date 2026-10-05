@@ -1,0 +1,356 @@
+#!/usr/bin/env python3
+# AV01 EN Hottest pipeline v3
+# Official tags -> filter -> resolve queue -> signed 1080 playlist -> 200/200.
+# Only successful probe counts toward requested count.
+
+import argparse, json, re, sys, time
+from pathlib import Path
+from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
+import requests
+
+HOT = "https://www.av01.media/en/videos/hottest"
+
+# Large-breast related tags. "Beautiful Tits" is included because AV01 currently uses it
+# on titles that otherwise may not carry literal "Big Tits".
+KEEP = [
+    ("Big Tits", r"\bbig\s*tits?\b"),
+    ("Big Boobs", r"\bbig\s*boobs?\b"),
+    ("Large Breasts", r"\blarge\s*breasts?\b"),
+    ("Big Breasts", r"\bbig\s*breasts?\b"),
+    ("Huge Breasts", r"\bhuge\s*breasts?\b"),
+    ("Huge Tits", r"\bhuge\s*tits?\b"),
+    ("Huge Boobs", r"\bhuge\s*boobs?\b"),
+    ("Busty", r"\bbusty\b"),
+    ("Beautiful Tits", r"\bbeautiful\s*tits?\b"),
+]
+
+# Hard blocks are evaluated ONLY against official #tags of the current video.
+BLOCK = [
+    ("Anal", r"^anal$"),
+    ("Toy/Sex Toys", r"^(?:toy|toys|sex\s*toy|sex\s*toys|dildo|dildos)$"),
+    ("Cross Dressing", r"^(?:cross[\s-]*dressing|crossdresser|cross[\s-]*dresser)$"),
+    ("Lesbian/Gay", r"^(?:lesbian|gay)$"),
+    ("Shemale/Transsexual", r"^(?:shemale|transsexual|transgender)$"),
+    ("Mature", r"^(?:mature|mature\s*woman|mother|milf)$"),
+]
+
+def normalize_tag(t):
+    return re.sub(r"\s+", " ", re.sub(r"^#+", "", (t or "").strip())).strip()
+
+def keep_hits(tags):
+    text = " | ".join(tags)
+    return [name for name, pat in KEEP if re.search(pat, text, re.I)]
+
+def block_hits(tags):
+    hits = []
+    for t in tags:
+        nt = normalize_tag(t)
+        for name, pat in BLOCK:
+            if re.search(pat, nt, re.I) and name not in hits:
+                hits.append(name)
+    return hits
+
+def sign(u, token, ro=""):
+    p = urlparse(u)
+    q = parse_qs(p.query, keep_blank_values=True)
+    if (p.hostname or "").endswith("iw01.xyz"):
+        q["access_token"] = [token]
+        if ro and "ro" not in q:
+            q["ro"] = [ro]
+    return urlunparse(p._replace(query=urlencode(q, doseq=True)))
+
+def rewrite(txt, base, token, ro=""):
+    out = []
+    for ln in txt.splitlines():
+        ln = re.sub(
+            r'URI="([^"]+)"',
+            lambda m: 'URI="' + sign(urljoin(base, m.group(1)), token, ro) + '"',
+            ln,
+        )
+        if ln.strip() and not ln.strip().startswith("#"):
+            ln = sign(urljoin(base, ln.strip()), token, ro)
+        out.append(ln)
+    return "\n".join(out) + "\n"
+
+def cards(pg):
+    return pg.locator("a[href]").evaluate_all("""els=>{
+      const s=new Set(),o=[];
+      for(const a of els){
+        let u,p;
+        try{u=new URL(a.getAttribute('href')||'',location.href).href;p=new URL(u).pathname}catch(e){continue}
+        if(!/\\/video\\/\\d+(?:\\/|$)/i.test(p)||s.has(u))continue;
+        s.add(u);
+        const b=a.closest('article,li,[class*="card"],[class*="video"],[class*="item"]')||a.parentElement||a;
+        const i=b.querySelector('img')||a.querySelector('img');
+        o.push({url:u,text:(b.innerText||a.innerText||'').trim(),
+          poster:i?(i.currentSrc||i.src||''):'',alt:i?(i.alt||''):''});
+      }
+      return o;
+    }""")
+
+def read_meta(pg, c):
+    d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
+      document.querySelectorAll('meta').forEach(x=>{
+        const k=x.getAttribute('property')||x.getAttribute('name');
+        if(k&&x.content)m[k]=x.content;
+      });
+      const heads=[...document.querySelectorAll('h1,h2,h3')].map(T).filter(Boolean);
+      const tagLinks=[...document.querySelectorAll('a[href]')].map(a=>({text:T(a),href:a.href}))
+        .filter(x=>{
+          try{return x.text && /\\/en\\/tag\\/\\d+(?:\\/|$)/i.test(new URL(x.href,location.href).pathname)}
+          catch(e){return false}
+        });
+      return {metas:m,heads,tagLinks};
+    }""")
+    tags, seen = [], set()
+    for x in d["tagLinks"]:
+        t = normalize_tag(x["text"])
+        if t and t.lower() not in seen:
+            seen.add(t.lower()); tags.append(t)
+    mm = d["metas"]
+    title = mm.get("og:title") or mm.get("twitter:title") or (d["heads"][0] if d["heads"] else c.get("text",""))
+    desc = mm.get("og:description") or mm.get("description") or ""
+    poster = mm.get("og:image") or c.get("poster","")
+    vm = re.search(r"/video/(\d+)", c["url"])
+    sm = re.search(r"/video/\d+/([^/?#]+)", c["url"])
+    # Collect useful textual metadata without using poster vision.
+    extra = pg.evaluate("""()=> {
+      const T=e=>(e?.textContent||'').trim();
+      const out={};
+      for(const el of document.querySelectorAll('time, [datetime], meta')) {
+        const k=el.getAttribute('name')||el.getAttribute('property')||el.getAttribute('itemprop')||'';
+        const v=el.getAttribute('datetime')||el.getAttribute('content')||T(el);
+        if(k&&v) (out[k] ||= []).push(v);
+      }
+      const jsonlds=[...document.querySelectorAll('script[type="application/ld+json"]')]
+        .map(x=>x.textContent).filter(Boolean);
+      return {extra:out,jsonlds};
+    }""")
+    return {
+        "id": vm.group(1) if vm else "",
+        "code": sm.group(1).split("-lada")[0].upper() if sm else "",
+        "url": c["url"], "title": title, "description": desc,
+        "poster": poster, "official_tags": tags,
+        "extra_metadata": extra["extra"],
+        "jsonld": extra["jsonlds"]
+    }
+
+def wait_for_tags(pg, c, seconds):
+    # Do not accept tags=[] immediately. Poll because AV01 hydrates video metadata after DOMContentLoaded.
+    deadline = time.time() + seconds
+    last = None
+    while time.time() < deadline:
+        try:
+            last = read_meta(pg, c)
+            if last["official_tags"]:
+                return last
+        except Exception:
+            pass
+        pg.wait_for_timeout(300)
+    return last or read_meta(pg, c)
+
+def attach_capture(pg):
+    state = {"sv": [], "ph": {}, "ch": {}, "token": "", "ro": ""}
+    def on_request(r):
+        lo = r.url.lower()
+        if "/api/v1/videos/" in lo and "sv3-v1-a1.m3u8" in lo:
+            state["sv"].append(r.url)
+            state["ph"].update(r.headers)
+        if "customers.iw01.xyz" in lo and ("sv3-v1-a1" in lo or "file90-" in lo):
+            q = parse_qs(urlparse(r.url).query)
+            if q.get("access_token"):
+                state["token"] = q["access_token"][0]
+                state["ro"] = (q.get("ro") or [""])[0]
+                state["ch"] = dict(r.headers)
+    pg.on("request", on_request)
+    return state
+
+def trigger_player(pg):
+    # Try actual video first, then likely play controls. Do not click arbitrary page buttons.
+    for sel in ("video", '[aria-label*="play" i]', '[class*="play" i]', '[id*="play" i]'):
+        try:
+            x = pg.locator(sel)
+            if x.count():
+                x.first.click(force=True, timeout=700)
+                return
+        except Exception:
+            pass
+
+def download_poster(meta, outdir):
+    u = meta.get("poster") or ""
+    if not u:
+        return ""
+    try:
+        r = requests.get(u, headers={"Referer": meta["url"], "User-Agent": "Mozilla/5.0"}, timeout=20)
+        r.raise_for_status()
+        ct = (r.headers.get("content-type") or "").lower()
+        ext = ".jpg"
+        if "png" in ct: ext = ".png"
+        elif "webp" in ct: ext = ".webp"
+        f = outdir / f'{meta["id"]}_poster{ext}'
+        f.write_bytes(r.content)
+        return str(f.resolve())
+    except Exception as e:
+        print(f"  -> POSTER FAIL {meta.get('code','')}: {e!r}", flush=True)
+        return ""
+
+def finish_resolve(job, outdir):
+    """Turn already captured sv3/token into direct playlist and probe it."""
+    s = requests.Session()
+    for ck in job["ctx"].cookies():
+        try:
+            s.cookies.set(ck["name"], ck["value"], domain=ck.get("domain"), path=ck.get("path","/"))
+        except Exception:
+            pass
+    ban = {"host","content-length","connection","accept-encoding",":authority",":method",":path",":scheme"}
+    h = {k:v for k,v in job["cap"]["ph"].items() if k.lower() not in ban}
+    h["Referer"] = job["m"]["url"]
+    r = s.get(job["cap"]["sv"][-1], headers=h, timeout=25)
+    r.raise_for_status()
+    direct = rewrite(r.text, r.url, job["cap"]["token"], job["cap"]["ro"])
+    f = outdir / f'{job["m"]["id"]}_1080_direct.m3u8'
+    f.write_text(direct, encoding="utf-8")
+
+    urls = []
+    for ln in direct.splitlines():
+        mm = re.search(r'URI="([^"]+)"', ln)
+        if mm: urls.append(mm.group(1))
+        elif ln.startswith("http"): urls.append(ln)
+        if len(urls) >= 2: break
+
+    hh = {k:v for k,v in job["cap"]["ch"].items() if k.lower() not in ban}
+    hh["Referer"] = job["m"]["url"]
+    checks = []
+    for u in urls:
+        rr = s.get(u, headers=hh, timeout=20, stream=True)
+        checks.append(rr.status_code); rr.close()
+
+    job["m"]["matched_large_breast_tags"] = job["keep"]
+    job["m"]["playlist"] = str(f.resolve())
+    job["m"]["probe"] = "OK " + "/".join(map(str, checks))
+    meta_file = outdir / f'{job["m"]["id"]}_metadata.json'
+    meta_file.write_text(json.dumps(job["m"], ensure_ascii=False, indent=2), encoding="utf-8")
+    job["m"]["metadata_file"] = str(meta_file.resolve())
+    return job["m"], checks
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--count", type=int, default=20)
+    ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--tag-wait", type=float, default=4.0)
+    ap.add_argument("--resolve-wait", type=float, default=12.0)
+    ap.add_argument("--out", default="av01_hottest_filtered_20")
+    a = ap.parse_args()
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("pip install requests playwright\nplaywright install chromium"); sys.exit(2)
+
+    out = Path(a.out); out.mkdir(exist_ok=True)
+    accepted, skipped = [], []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        listctx = browser.new_context(viewport={"width":1400,"height":950})
+        lp = listctx.new_page()
+        lp.goto(HOT, wait_until="domcontentloaded", timeout=45000)
+        cs = []
+        for _ in range(16):
+            lp.wait_for_timeout(500)
+            cs = cards(lp)
+            if cs: break
+            try: lp.evaluate("window.scrollTo(0,document.body.scrollHeight)")
+            except Exception: pass
+        print(f"Candidates: {len(cs)} | resolver slots: {a.workers}", flush=True)
+        if not cs: raise RuntimeError("No /video/<id>/ candidates")
+        listctx.close()
+
+        next_i = 0
+        resolvers = []
+
+        # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
+        # while subsequent candidates are filtered. This avoids premature program exit.
+        while (next_i < len(cs) or resolvers) and len(accepted) < a.count:
+            # First harvest any resolver that is ready/expired.
+            for job in list(resolvers):
+                cap = job["cap"]
+                if cap["sv"] and cap["token"]:
+                    try:
+                        m, checks = finish_resolve(job, out)
+                        if len(checks) >= 2 and all(x == 200 for x in checks[:2]):
+                            accepted.append(m)
+                            print(f"  -> DONE {len(accepted)}/{a.count} {m['code']} {m['probe']}", flush=True)
+                        else:
+                            skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
+                                            "reason":"probe failed "+str(checks)})
+                            print(f"  -> PROBE FAIL {m['code']} {checks}", flush=True)
+                    except Exception as e:
+                        skipped.append({"url":job["m"]["url"],"code":job["m"]["code"],
+                                        "official_tags":job["m"]["official_tags"],"reason":"resolve "+repr(e)})
+                        print(f"  -> RESOLVE ERROR {job['m']['code']}: {e!r}", flush=True)
+                    job["ctx"].close(); resolvers.remove(job)
+                elif time.time() >= job["deadline"]:
+                    m = job["m"]
+                    print(f"  -> RESOLVE FAIL {m['code']}: no sv3/token within {a.resolve_wait}s", flush=True)
+                    skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
+                                    "reason":"no sv3/token"})
+                    job["ctx"].close(); resolvers.remove(job)
+
+            if len(accepted) >= a.count:
+                break
+
+            # Keep resolver queue filled, but don't schedule more than needed.
+            needed = a.count - len(accepted) - len(resolvers)
+            if next_i < len(cs) and len(resolvers) < a.workers and needed > 0:
+                idx = next_i + 1
+                c = cs[next_i]; next_i += 1
+                ctx = browser.new_context(viewport={"width":1100,"height":760})
+                pg = ctx.new_page()
+                cap = attach_capture(pg)  # BEFORE goto
+                try:
+                    pg.goto(c["url"], wait_until="domcontentloaded", timeout=45000)
+                    m = wait_for_tags(pg, c, a.tag_wait)
+                    keep = keep_hits(m["official_tags"])
+                    block = block_hits(m["official_tags"])
+                    print(f"[{idx}] {m['code']} tags={m['official_tags']}\n    keep={keep or '-'} block={block or '-'}", flush=True)
+
+                    if block or not keep:
+                        skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
+                                        "official_tags":m["official_tags"],
+                                        "reason":("BLOCK "+",".join(block)) if block else "not large-breast related"})
+                        ctx.close()
+                    else:
+                        m["poster_file"] = download_poster(m, out)
+                        trigger_player(pg)
+                        resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep,
+                                          "deadline":time.time()+a.resolve_wait})
+                        print(f"  -> RESOLVE QUEUED {m['code']} | active={len(resolvers)}/{a.workers}", flush=True)
+                except Exception as e:
+                    skipped.append({"url":c["url"],"reason":"open/meta "+repr(e)})
+                    print(f"  -> FILTER ERROR {c['url']}: {e!r}", flush=True)
+                    ctx.close()
+            else:
+                # No new filter work can be scheduled now; keep browser event loop moving.
+                for job in resolvers:
+                    try: job["pg"].wait_for_timeout(150)
+                    except Exception: pass
+                time.sleep(.05)
+
+        for job in resolvers:
+            try: job["ctx"].close()
+            except Exception: pass
+        browser.close()
+
+    report = {"source":HOT,"accepted":accepted[:a.count],"skipped":skipped}
+    rp = out/"report.json"
+    rp.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+
+    print("\n=== ACCEPTED ===")
+    for i,m in enumerate(accepted[:a.count],1):
+        print(i,m["code"],m["matched_large_breast_tags"],m["probe"],m["url"],"\n ",m["playlist"])
+    print(f"SUCCESS: {len(accepted[:a.count])}/{a.count}")
+    print("REPORT:",rp.resolve())
+
+if __name__=="__main__":
+    main()
