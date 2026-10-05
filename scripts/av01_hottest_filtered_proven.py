@@ -89,9 +89,13 @@ def cards(pg):
       return o;
     }""")
 
-def load_more_cards(pg, current_count):
-    """Load the next Hottest API page inside the live browser session and merge its video URLs."""
-    page = current_count // 20 + 1
+def load_more_cards(pg, current_count, page=None):
+    """Load one exact Hottest API page inside the live browser session and merge its video URLs.
+    Returns (cards, item_count, ok).  A successful short/empty page is a real end-of-list signal;
+    HTTP/rate-limit failures are not.
+    """
+    if page is None:
+        page = current_count // 20 + 1
     api = f"/api/v1/videos/types/hottest?page={page}&limit=20"
     print(f"[LOAD MORE API] page={page}", flush=True)
     try:
@@ -102,10 +106,10 @@ def load_more_cards(pg, current_count):
         }""", api)
         if data.get("status") == 429:
             print("[LOAD MORE API] 429; keep waiting", flush=True)
-            return cards(pg)
+            return cards(pg), None, False
         if data.get("status") != 200:
             print(f"[LOAD MORE API] HTTP {data.get('status')}", flush=True)
-            return cards(pg)
+            return cards(pg), None, False
         payload = json.loads(data.get("text") or "{}")
         items = payload.get("data", payload)
         if isinstance(items, dict):
@@ -114,7 +118,7 @@ def load_more_cards(pg, current_count):
                     items = items[k]; break
         if not isinstance(items, list):
             print("[LOAD MORE API] unexpected payload", flush=True)
-            return cards(pg)
+            return cards(pg), None, False
         added = pg.evaluate("""(items)=>{
           const root=document.createElement('div'); root.id='av01-scanner-extra'; root.style.display='none';
           for(const v of items){
@@ -128,10 +132,10 @@ def load_more_cards(pg, current_count):
         }""", items)
         now=cards(pg)
         print(f"[LOAD MORE API] items={len(items)} merged={len(now)}", flush=True)
-        return now
+        return now, len(items), True
     except Exception as e:
         print(f"[LOAD MORE API] failed: {e!r}", flush=True)
-        return cards(pg)
+        return cards(pg), None, False
 
 def read_meta(pg, c):
     d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
@@ -383,6 +387,8 @@ def main():
         # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
         # while subsequent candidates are filtered. This avoids premature program exit.
         no_growth = 0
+        next_api_page = len(cs) // 20 + 1
+        list_exhausted = False
         while True:
             # First harvest any resolver that is ready/expired.
             for job in list(resolvers):
@@ -443,18 +449,28 @@ def main():
                 break
 
             # When the current Hottest batch is exhausted, use the site's Load More.
-            if next_i >= len(cs):
-                grown = load_more_cards(lp, len(cs))
-                if len(grown) > len(cs):
-                    print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
-                    cs = grown
+            if next_i >= len(cs) and not list_exhausted:
+                grown, item_count, api_ok = load_more_cards(lp, len(cs), next_api_page)
+                if api_ok:
+                    # Advance the API cursor even when this page contains only duplicates.
+                    # Deriving page from merged-card count caused page=9 to repeat forever at 176 cards.
+                    next_api_page += 1
+                    if len(grown) > len(cs):
+                        print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
+                        cs = grown
                     no_growth = 0
+                    if item_count is not None and item_count < 20:
+                        list_exhausted = True
+                        print(f"[LOAD MORE] end-of-site confirmed: API returned {item_count} items", flush=True)
                 else:
                     no_growth += 1
-                    print(f"[LOAD MORE] no growth ({no_growth}/3)", flush=True)
                     delay = min(120, 15 * no_growth)
-                    print(f"[LOAD MORE WAIT] retry in {delay}s; not treating no-growth as end-of-site", flush=True)
+                    print(f"[LOAD MORE WAIT] API unavailable; retry page={next_api_page} in {delay}s", flush=True)
                     time.sleep(delay)
+
+            if next_i >= len(cs) and list_exhausted and not resolvers:
+                print("[SCAN] Hottest list exhausted and resolver queue empty", flush=True)
+                break
 
             # Keep resolver queue filled, but don't schedule more than needed.
             needed = (a.count - len(accepted) - len(resolvers)) if a.count > 0 else a.workers
