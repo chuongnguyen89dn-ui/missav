@@ -171,9 +171,14 @@ def read_meta(pg, c):
         .map(x=>x.textContent).filter(Boolean);
       return {extra:out,jsonlds};
     }""")
+    # The pagination API may supply generic slugs such as "lada" or "lada-3p".
+    # Prefer the actual product code embedded in AV01's canonical title.
+    title_code = re.search(r"(?i)\\b((?:FC2[- ]?PPV[- ]?\\d+)|(?:[A-Z0-9]{2,12}[-_]\\d{2,7}))\\b", title or "")
+    slug_code = sm.group(1).split("-lada")[0].upper() if sm else ""
+    real_code = (title_code.group(1).replace("_","-").replace(" ","-").upper() if title_code else slug_code)
     return {
         "id": vm.group(1) if vm else "",
-        "code": sm.group(1).split("-lada")[0].upper() if sm else "",
+        "code": real_code,
         "url": c["url"], "title": title, "description": desc,
         "poster": poster, "official_tags": tags,
         "official_tag_refs": [{"name": normalize_tag(x["text"]), "href": x["href"], "id": (re.search(r"/tag/(\\d+)", x["href"]).group(1) if re.search(r"/tag/(\\d+)", x["href"]) else "")} for x in d["tagLinks"]],
