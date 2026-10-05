@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo [1/3] Scan AV01 Hottest until 20 filtered 1080p movies...
-node scripts\av01-hottest-filtered.mjs 20
+python scripts\av01_hottest_filtered_v2.py
 if errorlevel 1 (
   echo.
   echo [STOP] Scanner did not reach 20 valid movies. Nothing will be pushed.
