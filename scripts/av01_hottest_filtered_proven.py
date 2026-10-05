@@ -158,7 +158,7 @@ def read_meta(pg, c):
       const heads=[...document.querySelectorAll('h1,h2,h3')].map(T).filter(Boolean);
       const tagLinks=[...document.querySelectorAll('a[href]')].map(a=>({text:T(a),href:a.href}))
         .filter(x=>{
-          try{return x.text && /\\/en\\/tag\\/\\d+(?:\\/|$)/i.test(new URL(x.href,location.href).pathname)}
+          try{return x.text && /\\/(?:en|vn|ja|zh(?:-cn|-tw)?)\\/tag\\/\\d+(?:\\/|$)/i.test(new URL(x.href,location.href).pathname)}
           catch(e){return false}
         });
       return {metas:m,heads,tagLinks};
@@ -317,7 +317,7 @@ def finish_resolve(job, outdir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--count", type=int, default=20)
+    ap.add_argument("--count", type=int, default=0, help="0 = scan all Hottest pages")
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--tag-wait", type=float, default=4.0)
     ap.add_argument("--resolve-wait", type=float, default=12.0)
@@ -353,7 +353,7 @@ def main():
         # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
         # while subsequent candidates are filtered. This avoids premature program exit.
         no_growth = 0
-        while len(accepted) < a.count:
+        while True:
             # First harvest any resolver that is ready/expired.
             for job in list(resolvers):
                 cap = job["cap"]
@@ -396,11 +396,11 @@ def main():
                                         "reason":"no sv3/token after retries"})
                         job["ctx"].close(); resolvers.remove(job)
 
-            if len(accepted) >= a.count:
+            if a.count > 0 and len(accepted) >= a.count:
                 break
 
             # When the current Hottest batch is exhausted, use the site's Load More.
-            if next_i >= len(cs) and len(accepted) < a.count and not resolvers:
+            if next_i >= len(cs) and not resolvers:
                 grown = load_more_cards(lp, len(cs))
                 if len(grown) > len(cs):
                     print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
@@ -414,7 +414,7 @@ def main():
                         break
 
             # Keep resolver queue filled, but don't schedule more than needed.
-            needed = a.count - len(accepted) - len(resolvers)
+            needed = (a.count - len(accepted) - len(resolvers)) if a.count > 0 else a.workers
             if next_i < len(cs) and len(resolvers) < a.workers and needed > 0:
                 idx = next_i + 1
                 c = cs[next_i]; next_i += 1
@@ -428,13 +428,29 @@ def main():
                 try:
                     pg.goto(c["url"], wait_until="domcontentloaded", timeout=45000)
                     m = wait_for_tags(pg, c, a.tag_wait)
+                    # Tags are mandatory metadata: retry the VN detail if the EN detail has none.
+                    if not m["official_tags"]:
+                        alt_url = re.sub(r"/en/video/", "/vn/video/", c["url"], flags=re.I)
+                        try:
+                            pg.goto(alt_url, wait_until="domcontentloaded", timeout=45000)
+                            alt_c = dict(c)
+                            alt_c["url"] = alt_url
+                            m2 = wait_for_tags(pg, alt_c, max(a.tag_wait, 6.0))
+                            if m2["official_tags"]:
+                                m = m2
+                        except Exception:
+                            pass
                     keep = keep_hits(m["official_tags"])
                     block = block_hits(m["official_tags"])
                     year = extract_year(m)
                     m["year"] = year
                     print(f"[{idx}] {m['code']} year={year or '?'} tags={m['official_tags']}\n    prefer={keep or '-'} block={block or '-'}", flush=True)
 
-                    if year not in (2024, 2025, 2026):
+                    if not m["official_tags"]:
+                        skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
+                                        "official_tags":[],"year":year,"reason":"official tags unavailable"})
+                        ctx.close()
+                    elif year not in (2024, 2025, 2026):
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"year not 2024-2026" if year else "year unavailable"})
@@ -467,16 +483,17 @@ def main():
         listctx.close()
         browser.close()
 
-    report = {"source":HOT,"accepted":accepted[:a.count],"skipped":skipped}
+    final_accepted = accepted[:a.count] if a.count > 0 else accepted
+    report = {"source":HOT,"mode":"full-site" if a.count == 0 else "target-count","accepted":final_accepted,"skipped":skipped}
     rp = out/"report.json"
     rp.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
     print("\n=== ACCEPTED ===")
-    for i,m in enumerate(accepted[:a.count],1):
+    for i,m in enumerate(final_accepted,1):
         print(i,m["code"],m["matched_large_breast_tags"],m["probe"],m["url"],"\n ",m["playlist"])
-    print(f"SUCCESS: {len(accepted[:a.count])}/{a.count}")
+    print(f"SUCCESS: {len(final_accepted)} accepted; {len(skipped)} skipped")
     print("REPORT:",rp.resolve())
-    if len(accepted) < a.count:
+    if a.count > 0 and len(accepted) < a.count:
         raise SystemExit(2)
 
 if __name__=="__main__":
