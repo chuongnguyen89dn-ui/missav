@@ -14,13 +14,10 @@ function names(a){return (Array.isArray(a)?a:[]).map(x=>typeof x==="string"?x:(x
 function yearOf(v){for(const k of ["published_time","uploaded_time","release_date","date","year"]){const m=String(v?.[k]??"").match(/20(?:24|25|26)/);if(m)return Number(m[0])}return null}
 function blob(v,html=""){
  const api=[...names(v?.tags),...names(v?.genres),...names(v?.categories),...names(v?.labels),v?.title||"",v?.description||""];
- const page=String(html||"")
-   .replace(/<script[\\s\\S]*?<\\/script>/gi," ")
-   .replace(/<style[\\s\\S]*?<\\/style>/gi," ")
-   .replace(/<[^>]+>/g," ")
-   .replace(/&nbsp;|&#160;/gi," ")
-   .replace(/&amp;/gi,"&")
-   .replace(/\\s+/g," ");
+ let page=String(html||"").toLowerCase();
+ for(const token of ["<",">","/","\\n","\\r","\\t","&nbsp;","&#160;","&amp;"]){
+   page=page.split(token).join(" ");
+ }
  return (api.join(" ")+" "+page).toLowerCase();
 }
 async function detailHtml(context,id,href){
