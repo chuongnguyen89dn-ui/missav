@@ -406,19 +406,25 @@ def main():
                         else:
                             raise RuntimeError("probe failed "+str(checks))
                     except Exception as e:
-                        job["resolve_tries"] += 1
                         msg = repr(e)
-                        if "429" in msg or job["resolve_tries"] <= 3:
-                            delay = min(120, 15 * job["resolve_tries"])
+                        if "429" in msg:
+                            job["wait429_tries"] = job.get("wait429_tries", 0) + 1
+                            delay = min(120, 15 * job["wait429_tries"])
                             job["retry_at"] = time.time() + delay
-                            print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
+                            print(f"  -> WAIT 429 {job['m']['code']} retry#{job['wait429_tries']} in {delay}s", flush=True)
                         else:
-                            skipped.append({"id":job["m"]["id"],"url":job["m"]["url"],"code":job["m"]["code"],
-                                            "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
-                            processed_ids.add(job["m"]["id"])
-                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
-                            print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
-                            job["ctx"].close(); resolvers.remove(job)
+                            job["resolve_tries"] += 1
+                            if job["resolve_tries"] <= 3:
+                                delay = min(120, 15 * job["resolve_tries"])
+                                job["retry_at"] = time.time() + delay
+                                print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
+                            else:
+                                skipped.append({"id":job["m"]["id"],"url":job["m"]["url"],"code":job["m"]["code"],
+                                                "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
+                                processed_ids.add(job["m"]["id"])
+                                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                                print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
+                                job["ctx"].close(); resolvers.remove(job)
                 elif not (cap["sv"] and cap["token"]) and time.time() >= job["deadline"]:
                     m = job["m"]
                     job["token_tries"] += 1
