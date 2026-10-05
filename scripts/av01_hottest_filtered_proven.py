@@ -177,6 +177,27 @@ def read_meta(pg, c):
         "jsonld": extra["jsonlds"]
     }
 
+def extract_year(m):
+    """Return a publication/release year from AV01 metadata, or 0 when unavailable."""
+    vals = []
+    for k, arr in (m.get("extra_metadata") or {}).items():
+        if re.search(r"date|upload|publish|release", str(k), re.I):
+            vals.extend(arr if isinstance(arr,list) else [arr])
+    vals.extend(m.get("jsonld") or [])
+    for raw in vals:
+        text = str(raw)
+        # Prefer explicit date-bearing fields in JSON-LD / metadata.
+        for pat in (
+            r'"(?:datePublished|uploadDate|dateCreated|releaseDate)"\s*:\s*"((?:2024|2025|2026)[^"]*)"',
+            r'\b(2024|2025|2026)[-/]\d{1,2}[-/]\d{1,2}\b',
+            r'\b(2024|2025|2026)\b'
+        ):
+            mm = re.search(pat, text, re.I)
+            if mm:
+                y = re.search(r"20(?:24|25|26)", mm.group(0))
+                if y: return int(y.group(0))
+    return 0
+
 def wait_for_tags(pg, c, seconds):
     # Do not accept tags=[] immediately. Poll because AV01 hydrates video metadata after DOMContentLoaded.
     deadline = time.time() + seconds
@@ -390,9 +411,16 @@ def main():
                     m = wait_for_tags(pg, c, a.tag_wait)
                     keep = keep_hits(m["official_tags"])
                     block = block_hits(m["official_tags"])
-                    print(f"[{idx}] {m['code']} tags={m['official_tags']}\n    keep={keep or '-'} block={block or '-'}", flush=True)
+                    year = extract_year(m)
+                    m["year"] = year
+                    print(f"[{idx}] {m['code']} year={year or '?'} tags={m['official_tags']}\n    prefer={keep or '-'} block={block or '-'}", flush=True)
 
-                    if block:
+                    if year not in (2024, 2025, 2026):
+                        skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
+                                        "official_tags":m["official_tags"],"year":year,
+                                        "reason":"year not 2024-2026" if year else "year unavailable"})
+                        ctx.close()
+                    elif block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],
                                         "reason":"BLOCK "+",".join(block)})
