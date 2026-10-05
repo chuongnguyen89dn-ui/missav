@@ -88,6 +88,24 @@ def cards(pg):
       return o;
     }""")
 
+def load_more_cards(pg, current_count):
+    """Expand Hottest with the site's Load More control and return refreshed cards."""
+    before = current_count
+    try:
+        pg.evaluate("window.scrollTo(0,document.body.scrollHeight)")
+        pg.wait_for_timeout(400)
+        btn = pg.get_by_text(re.compile(r"load\\s*more|xem\\s*thêm|tải\\s*thêm", re.I))
+        if btn.count():
+            btn.first.click(force=True, timeout=2500)
+            for _ in range(20):
+                pg.wait_for_timeout(350)
+                now = cards(pg)
+                if len(now) > before:
+                    return now
+    except Exception as e:
+        print(f"[LOAD MORE] retryable: {e!r}", flush=True)
+    return cards(pg)
+
 def read_meta(pg, c):
     d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
       document.querySelectorAll('meta').forEach(x=>{
@@ -275,30 +293,54 @@ def main():
             # First harvest any resolver that is ready/expired.
             for job in list(resolvers):
                 cap = job["cap"]
-                if cap["sv"] and cap["token"]:
+                if cap["sv"] and cap["token"] and time.time() >= job.get("retry_at",0):
                     try:
                         m, checks = finish_resolve(job, out)
                         if len(checks) >= 2 and all(x == 200 for x in checks[:2]):
                             accepted.append(m)
                             print(f"  -> DONE {len(accepted)}/{a.count} {m['code']} {m['probe']}", flush=True)
+                            job["ctx"].close(); resolvers.remove(job)
                         else:
-                            skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
-                                            "reason":"probe failed "+str(checks)})
-                            print(f"  -> PROBE FAIL {m['code']} {checks}", flush=True)
+                            raise RuntimeError("probe failed "+str(checks))
                     except Exception as e:
-                        skipped.append({"url":job["m"]["url"],"code":job["m"]["code"],
-                                        "official_tags":job["m"]["official_tags"],"reason":"resolve "+repr(e)})
-                        print(f"  -> RESOLVE ERROR {job['m']['code']}: {e!r}", flush=True)
-                    job["ctx"].close(); resolvers.remove(job)
-                elif time.time() >= job["deadline"]:
+                        job["resolve_tries"] += 1
+                        msg = repr(e)
+                        if job["resolve_tries"] <= 3:
+                            delay = 4 * job["resolve_tries"]
+                            job["retry_at"] = time.time() + delay
+                            print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
+                        else:
+                            skipped.append({"url":job["m"]["url"],"code":job["m"]["code"],
+                                            "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
+                            print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
+                            job["ctx"].close(); resolvers.remove(job)
+                elif not (cap["sv"] and cap["token"]) and time.time() >= job["deadline"]:
                     m = job["m"]
-                    print(f"  -> RESOLVE FAIL {m['code']}: no sv3/token within {a.resolve_wait}s", flush=True)
-                    skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
-                                    "reason":"no sv3/token"})
-                    job["ctx"].close(); resolvers.remove(job)
+                    job["token_tries"] += 1
+                    if job["token_tries"] <= 2:
+                        print(f"  -> TOKEN RETRY {job['token_tries']}/2 {m['code']} (refresh player)", flush=True)
+                        cap["sv"].clear(); cap["token"]=""; cap["ro"]=""
+                        try:
+                            job["pg"].reload(wait_until="domcontentloaded", timeout=45000)
+                            trigger_player(job["pg"])
+                        except Exception as e:
+                            print(f"     refresh error: {e!r}", flush=True)
+                        job["deadline"] = time.time() + a.resolve_wait
+                    else:
+                        print(f"  -> RESOLVE FAIL {m['code']}: no sv3/token after retries", flush=True)
+                        skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
+                                        "reason":"no sv3/token after retries"})
+                        job["ctx"].close(); resolvers.remove(job)
 
             if len(accepted) >= a.count:
                 break
+
+            # When the current Hottest batch is exhausted, use the site's Load More.
+            if next_i >= len(cs) and len(accepted) < a.count:
+                grown = load_more_cards(lp, len(cs))
+                if len(grown) > len(cs):
+                    print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
+                    cs = grown
 
             # Keep resolver queue filled, but don't schedule more than needed.
             needed = a.count - len(accepted) - len(resolvers)
@@ -324,7 +366,7 @@ def main():
                         m["poster_file"] = download_poster(m, out)
                         trigger_player(pg)
                         resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep,
-                                          "deadline":time.time()+a.resolve_wait})
+                                          "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
                         print(f"  -> RESOLVE QUEUED {m['code']} | active={len(resolvers)}/{a.workers}", flush=True)
                 except Exception as e:
                     skipped.append({"url":c["url"],"reason":"open/meta "+repr(e)})
@@ -340,7 +382,7 @@ def main():
         for job in resolvers:
             try: job["ctx"].close()
             except Exception: pass
-        browser.close()
+        listctx.close()\n        browser.close()
 
     report = {"source":HOT,"accepted":accepted[:a.count],"skipped":skipped}
     rp = out/"report.json"
