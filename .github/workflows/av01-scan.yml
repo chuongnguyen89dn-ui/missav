@@ -12,21 +12,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Scan until 20 valid AV01 movies
+      - name: Start clean batch
+        run: rm -f data/av01-progress.json data/av01-catalog.json
+      - name: Scan until exactly 20 filtered valid movies
         id: scan
         continue-on-error: true
         env:
           AV01_DELAY_MS: '1800'
+          AV01_RESUME: '0'
         run: node scripts/av01-scan.mjs 20
-      - name: Save scan results and checkpoint
+      - name: Publish batch/checkpoint
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/av01-progress.json data/av01-catalog.json 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "data(av01): checkpoint scanner progress"
+          git diff --cached --quiet || git commit -m "data(av01): publish filtered batch"
           git pull --rebase origin main
           git push
-      - name: Fail if scanner did not finish
+      - name: Require 20 valid movies
         if: steps.scan.outcome == 'failure'
         run: exit 1
