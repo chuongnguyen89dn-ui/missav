@@ -282,14 +282,14 @@ def main():
             except Exception: pass
         print(f"Candidates: {len(cs)} | resolver slots: {a.workers}", flush=True)
         if not cs: raise RuntimeError("No /video/<id>/ candidates")
-        listctx.close()
 
         next_i = 0
         resolvers = []
 
         # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
         # while subsequent candidates are filtered. This avoids premature program exit.
-        while (next_i < len(cs) or resolvers) and len(accepted) < a.count:
+        no_growth = 0
+        while len(accepted) < a.count:
             # First harvest any resolver that is ready/expired.
             for job in list(resolvers):
                 cap = job["cap"]
@@ -336,11 +336,18 @@ def main():
                 break
 
             # When the current Hottest batch is exhausted, use the site's Load More.
-            if next_i >= len(cs) and len(accepted) < a.count:
+            if next_i >= len(cs) and len(accepted) < a.count and not resolvers:
                 grown = load_more_cards(lp, len(cs))
                 if len(grown) > len(cs):
                     print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
                     cs = grown
+                    no_growth = 0
+                else:
+                    no_growth += 1
+                    print(f"[LOAD MORE] no growth ({no_growth}/3)", flush=True)
+                    if no_growth >= 3:
+                        print("[STOP] Hottest has no more visible candidates.", flush=True)
+                        break
 
             # Keep resolver queue filled, but don't schedule more than needed.
             needed = a.count - len(accepted) - len(resolvers)
@@ -394,6 +401,8 @@ def main():
         print(i,m["code"],m["matched_large_breast_tags"],m["probe"],m["url"],"\n ",m["playlist"])
     print(f"SUCCESS: {len(accepted[:a.count])}/{a.count}")
     print("REPORT:",rp.resolve())
+    if len(accepted) < a.count:
+        raise SystemExit(2)
 
 if __name__=="__main__":
     main()
