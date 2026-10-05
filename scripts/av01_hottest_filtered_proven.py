@@ -89,40 +89,39 @@ def cards(pg):
     }""")
 
 def load_more_cards(pg, current_count):
-    """Expand the VN Hottest listing using its Load More control or infinite-scroll trigger."""
-    before = current_count
+    """Load the next VN Hottest batch through AV01's actual API discovered from the UI."""
+    page_no = current_count // 20 + 1
+    api = f"https://www.av01.media/api/v1/videos/types/hottest?page={page_no}&limit=20"
     try:
-        for attempt in range(3):
-            pg.evaluate("window.scrollTo(0,document.body.scrollHeight)")
-            pg.wait_for_timeout(900)
-            now = cards(pg)
-            if len(now) > before:
-                return now
-
-            controls = pg.locator("button, a, [role=button]")
-            n = controls.count()
-            for i in range(n-1, -1, -1):
-                el = controls.nth(i)
-                try:
-                    txt = (el.inner_text(timeout=300) or "").strip()
-                    aria = (el.get_attribute("aria-label") or "").strip()
-                    data = (el.get_attribute("data-testid") or "").strip()
-                    blob = " ".join([txt, aria, data])
-                    if re.search(r"load\\s*more|xem\\s*thêm|tải\\s*thêm|more", blob, re.I):
-                        el.scroll_into_view_if_needed(timeout=1000)
-                        el.click(force=True, timeout=2000)
-                        break
-                except Exception:
-                    continue
-
-            for _ in range(12):
-                pg.wait_for_timeout(500)
-                now = cards(pg)
-                if len(now) > before:
-                    return now
+        data = pg.evaluate("""async u => {
+          const r = await fetch(u, {credentials:'include'});
+          if(!r.ok) throw new Error('HTTP '+r.status);
+          return await r.json();
+        }""", api)
+        vids = (data or {}).get("videos") or (data or {}).get("data") or []
+        if isinstance(vids, dict):
+            vids = vids.get("videos") or vids.get("items") or []
+        old = cards(pg)
+        seen = set()
+        out = []
+        for x in old:
+            m = re.search(r"/video/(\\d+)(?:/|$)", x.get("url",""))
+            if m:
+                seen.add(m.group(1))
+            out.append(x)
+        for v in vids if isinstance(vids, list) else []:
+            vid = str(v.get("id") or v.get("video_id") or "")
+            if not vid or vid in seen:
+                continue
+            slug = v.get("slug") or v.get("code") or ""
+            u = f"https://www.av01.media/vn/video/{vid}/" + (str(slug).strip("/") if slug else "")
+            out.append({"url":u,"text":v.get("title") or v.get("name") or "","poster":v.get("cover") or v.get("poster") or "","alt":""})
+            seen.add(vid)
+        print(f"[LOAD MORE API] page={page_no} HTTP data={len(vids) if isinstance(vids,list) else 0}", flush=True)
+        return out
     except Exception as e:
-        print(f"[LOAD MORE] retryable: {e!r}", flush=True)
-    return cards(pg)
+        print(f"[LOAD MORE API] page={page_no} failed: {e!r}", flush=True)
+        return cards(pg)
 
 def read_meta(pg, c):
     d = pg.evaluate("""()=>{const T=e=>(e?.textContent||'').trim(),m={};
@@ -373,7 +372,9 @@ def main():
                 idx = next_i + 1
                 c = cs[next_i]; next_i += 1
                 c = dict(c)
-                c["url"] = re.sub(r"https://www\\.av01\\.media/vn/video/", "https://www.av01.media/en/video/", c["url"], flags=re.I)
+                m_id = re.search(r"/video/(\\d+)", c["url"])
+                if m_id:
+                    c["url"] = re.sub(r"/vn/video/", "/en/video/", c["url"], flags=re.I)
                 ctx = browser.new_context(viewport={"width":1100,"height":760})
                 pg = ctx.new_page()
                 cap = attach_capture(pg)  # BEFORE goto
