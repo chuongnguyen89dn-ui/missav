@@ -3,13 +3,23 @@
 # Official tags -> filter -> resolve queue -> signed 1080 playlist -> 200/200.
 # Only successful probe counts toward requested count.
 
-import argparse, json, re, sys, time, subprocess
+import argparse, json, re, sys, time, subprocess, os
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 import requests
 
 HOT = "https://www.av01.media/en/videos/hottest"
+HEARTBEAT_INTERVAL = 30
+STALL_SECONDS = 300
+
+def write_heartbeat(path, **kw):
+    try:
+        payload={"ts":datetime.now(timezone.utc).isoformat(), **kw}
+        Path(path).write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
+    except Exception:
+        pass
+
 
 # Large-breast related tags. "Beautiful Tits" is included because AV01 currently uses it
 # on titles that otherwise may not carry literal "Big Tits".
@@ -389,7 +399,26 @@ def main():
         no_growth = 0
         next_api_page = len(cs) // 20 + 1
         list_exhausted = False
+        heartbeat_file = out/"heartbeat.json"
+        last_progress = time.time()
+        last_heartbeat = 0
+        last_snapshot = (next_i, len(cs), len(accepted), len(processed_ids), next_api_page)
         while True:
+            now_ts=time.time()
+            snapshot=(next_i,len(cs),len(accepted),len(processed_ids),next_api_page)
+            if snapshot != last_snapshot:
+                last_progress=now_ts; last_snapshot=snapshot
+            if now_ts-last_heartbeat >= HEARTBEAT_INTERVAL:
+                write_heartbeat(heartbeat_file,status="running",next_i=next_i,candidates=len(cs),
+                                accepted=len(accepted),processed=len(processed_ids),resolvers=len(resolvers),
+                                api_page=next_api_page,seconds_without_progress=int(now_ts-last_progress))
+                last_heartbeat=now_ts
+            if now_ts-last_progress >= STALL_SECONDS:
+                print(f"[WATCHDOG] no progress for {STALL_SECONDS}s; saving checkpoint and restarting process",flush=True)
+                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                write_heartbeat(heartbeat_file,status="watchdog_restart",accepted=len(accepted),
+                                processed=len(processed_ids),api_page=next_api_page)
+                raise SystemExit(75)
             # First harvest any resolver that is ready/expired.
             for job in list(resolvers):
                 cap = job["cap"]
