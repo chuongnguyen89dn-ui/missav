@@ -2,16 +2,11 @@
 setlocal
 cd /d "%~dp0"
 title AV01 FULL SITE SCANNER
-echo AV01 FULL SITE SCAN
-echo F8 = hide this window. To show it again, use the AV01 tray helper.
-echo Ctrl+C = stop scan.
-python scripts\av01_hottest_filtered_proven.py --count 0 --out av01_hottest_full
-if errorlevel 1 (
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\av01_full_toggle.ps1"
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" (
  echo.
- echo [STOP] Full-site scanner failed.
+ echo [STOP] AV01 scanner failed with code %RC%.
  pause
- exit /b 1
 )
-echo.
-echo [DONE] Full-site scan finished.
-pause
+exit /b %RC%
