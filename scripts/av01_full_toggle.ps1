@@ -22,7 +22,7 @@ Write-Host "Ctrl+Alt+F9 = hide/show CMD (global hotkey). Ctrl+C = stop."
 $job=Start-Job -ScriptBlock {
   param($root)
   Set-Location $root
-  & python "scripts\av01_hottest_filtered_proven.py" --count 0 --out "av01_hottest_full"
+  & python "av01_hottest_filtered_proven.py" --count 0 --out "..\av01_hottest_full"
   exit $LASTEXITCODE
 } -ArgumentList $PSScriptRoot
 try {
