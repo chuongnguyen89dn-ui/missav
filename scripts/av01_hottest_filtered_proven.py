@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 import requests
 
-HOT = "https://www.av01.media/en/videos/hottest"
+HOT = "https://www.av01.media/vn/videos/hottest"
 
 # Large-breast related tags. "Beautiful Tits" is included because AV01 currently uses it
 # on titles that otherwise may not carry literal "Big Tits".
@@ -89,16 +89,34 @@ def cards(pg):
     }""")
 
 def load_more_cards(pg, current_count):
-    """Expand Hottest with the site's Load More control and return refreshed cards."""
+    """Expand the VN Hottest listing using its Load More control or infinite-scroll trigger."""
     before = current_count
     try:
-        pg.evaluate("window.scrollTo(0,document.body.scrollHeight)")
-        pg.wait_for_timeout(400)
-        btn = pg.get_by_text(re.compile(r"load\\s*more|xem\\s*thêm|tải\\s*thêm", re.I))
-        if btn.count():
-            btn.first.click(force=True, timeout=2500)
-            for _ in range(20):
-                pg.wait_for_timeout(350)
+        for attempt in range(3):
+            pg.evaluate("window.scrollTo(0,document.body.scrollHeight)")
+            pg.wait_for_timeout(900)
+            now = cards(pg)
+            if len(now) > before:
+                return now
+
+            controls = pg.locator("button, a, [role=button]")
+            n = controls.count()
+            for i in range(n-1, -1, -1):
+                el = controls.nth(i)
+                try:
+                    txt = (el.inner_text(timeout=300) or "").strip()
+                    aria = (el.get_attribute("aria-label") or "").strip()
+                    data = (el.get_attribute("data-testid") or "").strip()
+                    blob = " ".join([txt, aria, data])
+                    if re.search(r"load\\s*more|xem\\s*thêm|tải\\s*thêm|more", blob, re.I):
+                        el.scroll_into_view_if_needed(timeout=1000)
+                        el.click(force=True, timeout=2000)
+                        break
+                except Exception:
+                    continue
+
+            for _ in range(12):
+                pg.wait_for_timeout(500)
                 now = cards(pg)
                 if len(now) > before:
                     return now
@@ -354,6 +372,8 @@ def main():
             if next_i < len(cs) and len(resolvers) < a.workers and needed > 0:
                 idx = next_i + 1
                 c = cs[next_i]; next_i += 1
+                c = dict(c)
+                c["url"] = re.sub(r"https://www\\.av01\\.media/vn/video/", "https://www.av01.media/en/video/", c["url"], flags=re.I)
                 ctx = browser.new_context(viewport={"width":1100,"height":760})
                 pg = ctx.new_page()
                 cap = attach_capture(pg)  # BEFORE goto
