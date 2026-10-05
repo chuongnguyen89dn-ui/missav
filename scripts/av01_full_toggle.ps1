@@ -15,10 +15,10 @@ $hwnd=[AV01Window]::GetConsoleWindow()
 $HOTKEY=1
 $WM_HOTKEY=0x0312
 $PM_REMOVE=1
-# Ctrl+Alt+F8 is system-wide, so it can restore the console after it is hidden.
-if(-not [AV01Window]::RegisterHotKey($hwnd,$HOTKEY,3,0x77)){ throw "Cannot register Ctrl+Alt+F8" }
+# Ctrl+Alt+F9 is system-wide, so it can restore the console after it is hidden.
+if(-not [AV01Window]::RegisterHotKey($hwnd,$HOTKEY,3,0x78)){ throw "Cannot register Ctrl+Alt+F9" }
 $hidden=$false
-Write-Host "Ctrl+Alt+F8 = hide/show CMD (global hotkey). Ctrl+C = stop."
+Write-Host "Ctrl+Alt+F9 = hide/show CMD (global hotkey). Ctrl+C = stop."
 $job=Start-Job -ScriptBlock {
   param($root)
   Set-Location $root
