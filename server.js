@@ -7,7 +7,7 @@ let av01Catalog={movies:[]};
 try{av01Catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',import.meta.url),'utf8'));}catch{}
 const av01Movies=Array.isArray(av01Catalog)?av01Catalog:(av01Catalog.movies||[]);
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
-function av01Meta(x){return {id:'av01:'+x.id,type:'movie',name:x.title||x.dvd_id||('AV01 '+x.id),poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:(x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),cast:(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),language:'Tiếng Nhật'};}
+function av01Meta(x){return {id:'av01:'+x.id,type:'movie',name:x.title||x.dvd_id||('AV01 '+x.id),poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),genre:(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),cast:(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),language:'Tiếng Nhật'};}
 const IKISODA_CATALOG_URL='https://raw.githubusercontent.com/chuongnguyen89dn-ui/missav/ikisoda-data/data/ikisoda-catalog.json';
 let ikisodaCache={data:JSON.parse(readFileSync(new URL('./data/ikisoda-catalog.json',import.meta.url),'utf8')),at:0};
 async function getIkisodaCatalog(){
@@ -51,7 +51,7 @@ function filmMeta(f){
  };
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
-const publicManifest={id:'community.missav.hls.test',version:'0.4.0',name:'MissAV 1080p',description:'174 verified 1080p entries with Nuvio-native Vietnamese metadata',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
+const publicManifest={id:'community.missav.hls.test',version:'0.4.1',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
 function normalizeIkisodaMovie(x){
  const code=String(x?.code||x?.id||'').replace(/^ikisoda:/i,'').trim();
  if(!code)return null;
