@@ -455,7 +455,7 @@ def main():
                 break
 
             # When the current Hottest batch is exhausted, use the site's Load More.
-            if next_i >= len(cs) and not resolvers:
+            if next_i >= len(cs):
                 grown = load_more_cards(lp, len(cs))
                 if len(grown) > len(cs):
                     print(f"[LOAD MORE] candidates {len(cs)} -> {len(grown)}", flush=True)
@@ -507,15 +507,17 @@ def main():
                     if not m["official_tags"]:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":[],"year":year,"reason":"official tags unavailable"})
-                        processed_ids.add(m["id"])
-                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                        print(f"  -> META WAIT {m['code']}: official tags unavailable; leave pending for retry", flush=True)
                         ctx.close()
                     elif year not in (2024, 2025, 2026):
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"year not 2024-2026" if year else "year unavailable"})
-                        processed_ids.add(m["id"])
-                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                        if year:
+                            processed_ids.add(m["id"])
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                        else:
+                            print(f"  -> META WAIT {m['code']}: year unavailable; leave pending for retry", flush=True)
                         ctx.close()
                     elif block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
