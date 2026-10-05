@@ -5,7 +5,11 @@ const LIMIT=20,target=Number(process.argv[2]||20),delay=Number(process.env.AV01_
 const include=["big tits","big boobs","large breasts","huge breasts","huge tits","huge boobs","busty","big breasts"];
 const exclude=["toy","sex toys","dildo","anal","cross dressing","lesbian","gay","shemale","transsexual","mature","熟女","mother","milf"];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let state={started_at:new Date().toISOString(),next_page:1,scanned:0,metadata:0,quality_checked:0,valid:0,target,rejections:{no_id:0,year:0,include:0,exclude:0,quality:0,error:0},movies:[],seen:[]};\n// A new workflow run is a clean 20-valid batch. Resume is opt-in only.\nif(process.env.AV01_RESUME==="1"){try{state={...state,...JSON.parse(await fs.readFile("data/av01-progress.json","utf8"))};state.target=target}catch{}}
+let state={started_at:new Date().toISOString(),next_page:1,scanned:0,metadata:0,quality_checked:0,valid:0,target,rejections:{no_id:0,year:0,include:0,exclude:0,quality:0,error:0},movies:[],seen:[]};
+// A new workflow run is a clean 20-valid batch. Resume is opt-in only.
+if(process.env.AV01_RESUME==="1"){
+ try{state={...state,...JSON.parse(await fs.readFile("data/av01-progress.json","utf8"))};state.target=target}catch{}
+}
 const seen=new Set(state.seen||[]); const accepted=new Set((state.movies||[]).map(x=>String(x.id)));
 async function save(){
  state.valid=state.movies.length;state.seen=[...seen];state.updated_at=new Date().toISOString();
