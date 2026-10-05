@@ -3,7 +3,8 @@
 # Official tags -> filter -> resolve queue -> signed 1080 playlist -> 200/200.
 # Only successful probe counts toward requested count.
 
-import argparse, json, re, sys, time
+import argparse, json, re, sys, time, subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
 import requests
@@ -316,6 +317,25 @@ def finish_resolve(job, outdir):
     job["m"]["metadata_file"] = str(meta_file.resolve())
     return job["m"], checks
 
+def save_state(path, run_id, accepted, skipped, processed_ids, published_count):
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"run_id":run_id,"source":HOT,"accepted":accepted,"skipped":skipped,"processed_ids":sorted(processed_ids),"published_count":published_count},ensure_ascii=False,indent=2),encoding="utf-8")
+    tmp.replace(path)
+
+def publish_batch(repo_root, accepted, run_id):
+    n=(len(accepted)//20)*20
+    if not n: return 0
+    cat=repo_root/"data"/"av01-catalog.json"
+    payload={"updated_at":datetime.now(timezone.utc).isoformat(),"source":HOT,"run_id":run_id,"clean_run":True,"count":n,"movies":accepted[:n]}
+    cat.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+    rel=cat.relative_to(repo_root).as_posix()
+    subprocess.run(["git","add","--",rel],cwd=repo_root,check=True)
+    changed=subprocess.run(["git","diff","--cached","--quiet"],cwd=repo_root).returncode!=0
+    if changed:
+        subprocess.run(["git","commit","-m",f"data(av01): publish verified batch through {n} movies"],cwd=repo_root,check=True)
+        subprocess.run(["git","push","origin","main"],cwd=repo_root,check=True)
+    return n
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--count", type=int, default=0, help="0 = scan all Hottest pages")
@@ -330,8 +350,21 @@ def main():
     except ImportError:
         print("pip install requests playwright\nplaywright install chromium"); sys.exit(2)
 
-    out = Path(a.out); out.mkdir(exist_ok=True)
-    accepted, skipped = [], []
+    repo_root=Path(__file__).resolve().parent.parent
+    out=(repo_root/a.out).resolve(); out.mkdir(exist_ok=True)
+    state_file=out/"checkpoint.json"
+    run_id="av01-clean-en-hottest-20261005"
+    accepted, skipped, processed_ids, published_count = [], [], set(), 0
+    if state_file.exists():
+        st=json.loads(state_file.read_text(encoding="utf-8"))
+        if st.get("run_id")==run_id and st.get("source")==HOT:
+            accepted=st.get("accepted",[]); skipped=st.get("skipped",[])
+            processed_ids=set(st.get("processed_ids",[])); published_count=int(st.get("published_count",0))
+            print(f"[RESUME] processed={len(processed_ids)} accepted={len(accepted)} published={published_count}",flush=True)
+        else:
+            state_file.unlink()
+    else:
+        print("[CLEAN RUN] no old AV01 scan data imported",flush=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -362,8 +395,13 @@ def main():
                     try:
                         m, checks = finish_resolve(job, out)
                         if len(checks) >= 2 and all(x == 200 for x in checks[:2]):
-                            accepted.append(m)
-                            print(f"  -> DONE {len(accepted)}/{a.count} {m['code']} {m['probe']}", flush=True)
+                            if m["id"] not in {x.get("id") for x in accepted}: accepted.append(m)
+                            processed_ids.add(m["id"])
+                            if len(accepted) >= published_count + 20:
+                                published_count=publish_batch(repo_root,accepted,run_id)
+                                print(f"  -> GITHUB PUBLISHED {published_count}",flush=True)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                            print(f"  -> DONE {len(accepted)} {m['code']} {m['probe']}", flush=True)
                             job["ctx"].close(); resolvers.remove(job)
                         else:
                             raise RuntimeError("probe failed "+str(checks))
@@ -420,6 +458,9 @@ def main():
                 idx = next_i + 1
                 c = cs[next_i]; next_i += 1
                 c = dict(c)
+                cm=re.search(r"/video/(\d+)",c["url"]); cid=cm.group(1) if cm else ""
+                if cid and cid in processed_ids:
+                    continue
                 m_id = re.search(r"/video/(\\d+)", c["url"])
                 if m_id:
                     c["url"] = re.sub(r"/vn/video/", "/en/video/", c["url"], flags=re.I)
