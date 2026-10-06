@@ -1,68 +1,249 @@
 # TIẾP TỤC DỰ ÁN — AV01 Hottest Scanner
 
-## Bản scanner chuẩn — ƯU TIÊN GIỮ LẠI
+## 0. TRẠNG THÁI CHUẨN
 
-**Trạng thái: BẢN THÀNH CÔNG NHẤT HIỆN TẠI.**
+**ĐÂY LÀ BẢN SCANNER AV01 THÀNH CÔNG NHẤT HIỆN TẠI. KHÔNG VIẾT LẠI TỪ ĐẦU.**
 
+- Repo: `chuongnguyen89dn-ui/missav`
+- Branch: `main`
 - Script chính: `scripts/av01_hottest_filtered_proven.py`
-- Mốc code resolver quan trọng: commit `c909ebd14e3729474389e789677271bf12c86627` — `fix(av01): use proven geo cdn-access token flow`
+- Launcher Windows: `SCAN-AV01-FULL.cmd`
+- Helper publish checkpoint: `scripts/publish_av01_checkpoint_all.py`
+- Code tham khảo resolver đã pass: `scripts/av01-vlc-proof.mjs`
+- Commit quyết định của resolver: `c909ebd14e3729474389e789677271bf12c86627` — `fix(av01): use proven geo cdn-access token flow`
 - Nguồn quét: `https://www.av01.media/en/videos/hottest`
-- Chế độ: quét toàn bộ Hottest, checkpoint/resume, pending retry, watchdog.
-- Kết quả thực tế đã xác nhận: catalog đã tăng từ 446 lên ít nhất 700 phim verified trong phiên chạy này.
-- **Không thay thế/viết lại scanner này từ đầu khi sửa lỗi. Chỉ sửa tối thiểu, giữ pipeline đã chứng minh hoạt động.**
+- Catalog: `data/av01-catalog.json`
+- Checkpoint local: `av01_hottest_full/checkpoint.json`
+- Phiên thành công đã tăng catalog từ 446 lên ít nhất 700 phim verified.
 
-## Vì sao bản này thành công
+Mục tiêu của tài liệu này là để một phiên làm việc mới có thể dựng lại, chạy, sửa, tiếp tục và publish scanner **từ đầu đến cuối** mà không phải đoán lại cách làm.
 
-Điểm quyết định là bỏ phụ thuộc vào thao tác click player để chờ token. Scanner lấy token trực tiếp theo flow đã chứng minh:
+---
 
-1. GET `https://files.iw01.xyz/edge/geo.js?json`.
-2. Lấy `token_v2`, `expires`, `ip`.
-3. GET `https://customers.iw01.xyz/api/v1/videos/<VIDEO_ID>/cdn-access` với ba tham số trên.
-4. Lấy `access_token`.
-5. Dùng manifest 1080p:
-   `https://www.av01.media/api/v1/videos/<VIDEO_ID>/manifest/index90-sv3-v1-a1.m3u8`
-6. Rewrite/sign các URL CDN bằng `access_token`.
-7. Chỉ ACCEPT khi probe các object đầu trả về `200/200`.
+# 1. KIẾN TRÚC HOẠT ĐỘNG
 
-Dấu hiệu chạy đúng trong log:
-- `DIRECT TOKEN OK`
-- `RESOLVE QUEUED`
-- `DONE <count> <code> OK 200/200`
+Scanner thực hiện tuần tự:
 
-## Quy tắc lọc hiện tại
+1. Mở trang Hottest bằng Chromium/Playwright.
+2. Lấy danh sách phim và tiếp tục pagination qua API Hottest.
+3. Mở detail từng phim để lấy official tags + metadata.
+4. Chỉ nhận năm 2024/2025/2026.
+5. Loại phim có hard-block tags.
+6. Lấy AV01 CDN access token trực tiếp, không phụ thuộc click player.
+7. Lấy manifest sv3 1080p.
+8. Rewrite/sign các object CDN bằng access token.
+9. Probe nguồn thật.
+10. Chỉ ACCEPT khi probe thành công `200/200`.
+11. Ghi checkpoint liên tục.
+12. Lỗi tạm thời đưa vào pending để retry.
+13. Đủ batch thì cập nhật `data/av01-catalog.json`, commit và push GitHub.
+14. Quét đến khi Hottest hết và pending hết.
 
-- Năm chấp nhận: 2024, 2025, 2026.
-- Các tag ngực lớn chỉ là **ưu tiên/xếp hạng**, KHÔNG bắt buộc.
-- Hard block theo official tags: Anal; Toy/Sex Toys/Dildo; Cross Dressing; Lesbian/Gay; Shemale/Transsexual/Transgender; Mature/Mother/MILF.
-- Không tính phim trùng ID.
-- Không ACCEPT chỉ vì nhãn 1080p; phải probe nguồn phát thật.
-- Metadata/tag chưa lấy được hoặc lỗi mạng/token tạm thời phải đưa vào pending, không FAIL vĩnh viễn.
-- Poster/metadata cleanup là pass sau, không làm chậm pass quét/phát.
+Dấu hiệu resolver đang hoạt động đúng:
 
-## Checkpoint và publish
+```text
+DIRECT TOKEN OK
+RESOLVE QUEUED
+DONE <count> <code> OK 200/200
+```
 
-- Checkpoint: `av01_hottest_full/checkpoint.json`.
-- Catalog addon: `data/av01-catalog.json`.
-- Scanner publish batch verified lên GitHub.
-- Helper publish toàn bộ accepted checkpoint: `scripts/publish_av01_checkpoint_all.py`.
-- Render không cần deploy trong lúc đang quét nếu chưa được yêu cầu.
+---
 
-## Cách viết/sửa script trên GitHub cho dự án này
+# 2. FLOW TOKEN THÀNH CÔNG — KHÔNG ĐƯỢC THAY BẰNG CƠ CHẾ CLICK PLAYER
 
-Nguyên tắc bắt buộc:
+Đây là phần quan trọng nhất.
 
-1. **Đọc script đang chạy và lịch sử commit trước khi sửa.** Không suy diễn lại kiến trúc.
-2. Tạo thay đổi nhỏ, đúng một mục tiêu. Không rewrite cả file khi pipeline đang chạy tốt.
-3. Giữ nguyên các phần đã chứng minh: direct geo/cdn-access token, 1080 sv3 manifest, signed playlist, probe 200/200, checkpoint, pending retry, watchdog và publish.
-4. Sau khi sửa Python phải kiểm tra cú pháp:
-   `python -m py_compile scripts\\av01_hottest_filtered_proven.py`
-5. Commit message phải mô tả đúng thay đổi, ví dụ:
-   `fix(av01): use proven geo cdn-access token flow`
-6. Trước khi restart scanner, phải xác định thay đổi có thật sự cần restart không. Không dừng một phiên quét đang chạy tốt chỉ để áp dụng thay đổi không cấp thiết.
-7. Khi sửa lỗi, ưu tiên tham khảo code đã pass trong repo (đặc biệt `scripts/av01-vlc-proof.mjs`) thay vì tự tạo cơ chế token/player mới.
-8. Không báo thành công nếu chưa có bằng chứng `DIRECT TOKEN OK` + `DONE ... OK 200/200` hoặc catalog commit tương ứng.
+### Bước 1 — lấy thông tin geo
 
-## Lệnh chạy chuẩn trên Windows CMD
+GET:
+
+```text
+https://files.iw01.xyz/edge/geo.js?json
+```
+
+Lấy:
+
+- `token_v2`
+- `expires`
+- `ip`
+
+### Bước 2 — xin CDN access token
+
+GET:
+
+```text
+https://customers.iw01.xyz/api/v1/videos/<VIDEO_ID>/cdn-access
+```
+
+Query:
+
+```text
+token_v2=<token_v2>
+expires=<expires>
+ip=<ip>
+```
+
+Kết quả cần:
+
+```text
+access_token
+```
+
+### Bước 3 — manifest 1080
+
+```text
+https://www.av01.media/api/v1/videos/<VIDEO_ID>/manifest/index90-sv3-v1-a1.m3u8
+```
+
+### Bước 4 — ký playlist
+
+Mọi URL object thuộc `iw01.xyz` phải được rewrite/sign với:
+
+```text
+?access_token=<ACCESS_TOKEN>
+```
+
+Nếu có `ro` thì giữ/thêm `ro`.
+
+### Bước 5 — xác minh thật
+
+Probe các object đầu tiên. Chỉ ACCEPT khi:
+
+```text
+OK 200/200
+```
+
+Không được coi nhãn 1080p trên giao diện là bằng chứng phim phát được.
+
+---
+
+# 3. QUY TẮC LỌC
+
+### Năm
+
+Chấp nhận:
+
+- 2024
+- 2025
+- 2026
+
+### Preferred tags
+
+Các tag sau chỉ là **ưu tiên/xếp hạng**, KHÔNG phải điều kiện bắt buộc:
+
+- Big Tits
+- Big Boobs
+- Large Breasts
+- Huge Breasts
+- Huge Tits
+- Huge Boobs
+- Busty
+- Big Breasts
+- Beautiful Tits
+- Ngực khủng nếu AV01 trả tag tiếng Việt tương ứng
+
+### Hard block
+
+Loại nếu official tags chứa:
+
+- Toy
+- Sex Toys
+- Dildo
+- Anal
+- Cross Dressing
+- Lesbian
+- Gay
+- Shemale
+- Transsexual / Transgender
+- Mature
+- Mother
+- MILF
+- các alias tiếng Việt tương ứng như Máy bay bà già/Mature
+
+Không lọc bằng suy đoán từ poster.
+
+---
+
+# 4. TẠO REPO / ĐƯA SCRIPT LÊN GITHUB TỪ ĐẦU
+
+Nếu repo chưa tồn tại, tạo repository trên GitHub trước. Repo hiện tại đã tồn tại nên phần dưới chủ yếu dùng khi dựng lại trên máy mới.
+
+## 4.1 Clone repo về Windows
+
+Mở **CMD**:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads
+git clone https://github.com/chuongnguyen89dn-ui/missav.git
+cd /d C:\Users\Trinh\Downloads\missav
+```
+
+Nếu repo đã có sẵn:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+git pull
+```
+
+## 4.2 Cấu trúc file bắt buộc
+
+```text
+missav/
+├─ scripts/
+│  ├─ av01_hottest_filtered_proven.py
+│  ├─ av01-vlc-proof.mjs
+│  ├─ publish_av01_checkpoint_all.py
+│  └─ test_hotkey.ps1
+├─ data/
+│  └─ av01-catalog.json
+├─ SCAN-AV01-FULL.cmd
+└─ TIEP_TUC_DU_AN.md
+```
+
+Script chuẩn phải nằm đúng tại:
+
+```text
+scripts/av01_hottest_filtered_proven.py
+```
+
+Không tạo scanner mới ở tên khác nếu chỉ đang sửa scanner hiện tại.
+
+---
+
+# 5. CÀI MÔI TRƯỜNG TRÊN MÁY MỚI
+
+Kiểm tra Python:
+
+```cmd
+python --version
+```
+
+Kiểm tra Git:
+
+```cmd
+git --version
+```
+
+Cài dependency Python:
+
+```cmd
+python -m pip install requests playwright
+python -m playwright install chromium
+```
+
+Kiểm tra script compile:
+
+```cmd
+python -m py_compile scripts\av01_hottest_filtered_proven.py
+```
+
+Nếu lệnh compile không báo lỗi thì mới chạy scanner.
+
+---
+
+# 6. CÁCH CHẠY SCANNER TỪ ĐẦU ĐẾN CUỐI
+
+## 6.1 Chạy/resume bình thường
 
 ```cmd
 cd /d C:\Users\Trinh\Downloads\missav
@@ -71,8 +252,302 @@ python -m py_compile scripts\av01_hottest_filtered_proven.py
 SCAN-AV01-FULL.cmd
 ```
 
-Ctrl+Alt+F9 dùng để ẩn/hiện cửa sổ CMD; scanner vẫn tiếp tục chạy.
+Launcher gọi scanner với chế độ full-site và thư mục checkpoint `av01_hottest_full`.
 
-## Ghi chú cho lần tiếp tục sau
+Ctrl+Alt+F9: ẩn/hiện CMD nhưng scanner vẫn chạy.
 
-Khi tiếp tục dự án AV01, **bắt đầu từ file này và script `scripts/av01_hottest_filtered_proven.py`**. Không quay lại các scanner cũ đã thất bại. Bản direct-token hiện tại là baseline ưu tiên bảo toàn.
+## 6.2 Chạy Python trực tiếp nếu cần debug
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+python scripts\av01_hottest_filtered_proven.py --count 0 --out av01_hottest_full
+```
+
+`--count 0` nghĩa là quét toàn bộ Hottest.
+
+## 6.3 Resume
+
+Không xóa:
+
+```text
+av01_hottest_full/checkpoint.json
+```
+
+Chỉ chạy lại:
+
+```cmd
+SCAN-AV01-FULL.cmd
+```
+
+Scanner đọc checkpoint và tiếp tục.
+
+## 6.4 Clean run thật sự
+
+**Chỉ làm khi có chủ ý bỏ checkpoint cũ.** Dừng scanner trước, sau đó đổi tên thư mục checkpoint để vẫn giữ bản sao:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+ren av01_hottest_full av01_hottest_full_backup
+SCAN-AV01-FULL.cmd
+```
+
+Không clean run khi scanner đang chạy tốt.
+
+---
+
+# 7. CÁCH SCANNER TỰ ĐƯA PHIM LÊN GITHUB
+
+Khi đạt ngưỡng publish, hàm `publish_batch()`:
+
+1. Ghi phim verified vào `data/av01-catalog.json`.
+2. `git add data/av01-catalog.json`
+3. Tạo commit dạng:
+
+```text
+data(av01): publish verified batch through <N> movies
+```
+
+4. `git push origin main`
+
+Ví dụ commit đã thành công:
+
+```text
+data(av01): publish verified batch through 700 movies
+```
+
+Muốn publish toàn bộ accepted đang có trong checkpoint:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+git pull
+python -m py_compile scripts\publish_av01_checkpoint_all.py
+python scripts\publish_av01_checkpoint_all.py
+```
+
+Không deploy Render tự động chỉ vì catalog vừa push, trừ khi có yêu cầu deploy.
+
+---
+
+# 8. CÁCH TẠO / SỬA SCRIPT VÀ PUSH LÊN GITHUB
+
+## 8.1 Trước khi sửa
+
+Luôn cập nhật repo:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+git pull
+git status
+```
+
+Đọc:
+
+- `scripts/av01_hottest_filtered_proven.py`
+- `scripts/av01-vlc-proof.mjs`
+- `TIEP_TUC_DU_AN.md`
+- các commit gần nhất liên quan AV01
+
+## 8.2 Sau khi sửa Python
+
+Compile:
+
+```cmd
+python -m py_compile scripts\av01_hottest_filtered_proven.py
+```
+
+Xem thay đổi:
+
+```cmd
+git diff -- scripts\av01_hottest_filtered_proven.py
+git status
+```
+
+## 8.3 Commit
+
+```cmd
+git add scripts\av01_hottest_filtered_proven.py
+git commit -m "fix(av01): mô tả chính xác thay đổi"
+```
+
+## 8.4 Push
+
+```cmd
+git push origin main
+```
+
+## 8.5 Xác minh
+
+```cmd
+git status
+git log -1 --oneline
+```
+
+Sau đó chỉ restart scanner nếu thay đổi thực sự cần được nạp vào process đang chạy.
+
+---
+
+# 9. CÁCH SỬA SCRIPT TRỰC TIẾP QUA GITHUB CONNECTOR / API
+
+Nếu ChatGPT hoặc công cụ có quyền ghi GitHub:
+
+1. Fetch file hiện tại và lấy **blob SHA hiện tại**.
+2. Sửa trên nội dung file hiện tại, không dựng lại từ trí nhớ.
+3. Gửi **toàn bộ nội dung file mới** cùng blob SHA vào thao tác update file.
+4. Commit thẳng lên `main` với message rõ ràng.
+5. Fetch lại file/commit để xác nhận write thành công.
+6. Máy Windows đang chạy repo phải `git pull` để nhận code mới.
+7. Compile trước khi restart scanner.
+
+Điểm quan trọng: GitHub update file cần SHA của phiên bản đang tồn tại. Nếu file đã thay đổi sau lúc fetch, phải fetch lại SHA rồi mới update; không ghi đè mù.
+
+---
+
+# 10. NGUYÊN TẮC SỬA CODE — BẮT BUỘC
+
+1. Đọc code hiện tại và lịch sử trước.
+2. Chỉ sửa phần cần sửa.
+3. Không rewrite toàn scanner khi pipeline đang chạy.
+4. Không bỏ direct geo/cdn-access token flow.
+5. Không quay lại cơ chế click player làm nguồn token chính.
+6. Giữ sv3 1080 manifest.
+7. Giữ rewrite/sign playlist.
+8. Giữ probe 200/200.
+9. Giữ checkpoint/resume.
+10. Giữ pending retry cho lỗi tạm thời.
+11. Giữ watchdog.
+12. Giữ pagination toàn Hottest.
+13. Giữ publish catalog lên GitHub.
+14. Không để poster/metadata cleanup làm chậm pass xác minh stream.
+15. Không restart scanner đang chạy tốt chỉ để áp dụng thay đổi không cấp thiết.
+16. Không báo thành công nếu chưa có log hoặc commit chứng minh.
+
+---
+
+# 11. LỖI TẠM THỜI VÀ PENDING
+
+Các lỗi như:
+
+- HTTP 429
+- metadata chưa hydrate
+- token tạm lỗi
+- 504
+- probe/open timeout
+- mất mạng
+
+không được đánh dấu FAIL vĩnh viễn.
+
+Phải:
+
+1. lưu checkpoint;
+2. đưa item vào pending;
+3. tiếp tục phim khác;
+4. retry pending sau;
+5. không để một phim lỗi chặn toàn bộ scanner.
+
+---
+
+# 12. WATCHDOG / MẤT MẠNG / KHỞI ĐỘNG LẠI
+
+`SCAN-AV01-FULL.cmd` chạy scanner trong vòng lặp watchdog.
+
+Nếu scanner thoát non-zero, launcher chờ rồi chạy lại từ checkpoint.
+
+Nếu scanner phát hiện không có tiến triển trong khoảng watchdog, nó lưu checkpoint rồi thoát với mã lỗi để launcher restart.
+
+Vì vậy **không xóa checkpoint khi lỗi**.
+
+---
+
+# 13. POSTER / METADATA
+
+Pass quét chính ưu tiên:
+
+```text
+find -> filter -> direct token -> 1080 -> probe -> accepted
+```
+
+Không tải poster trong pass này.
+
+Sau khi scan xong mới làm pass metadata/poster:
+
+- sửa code/title sai;
+- lấy description;
+- release/year;
+- duration;
+- actresses;
+- maker/studio;
+- official tags + tag id/href;
+- stable poster.
+
+ID số AV01 là khóa chính để không mất liên kết dù code/title parse chưa đẹp.
+
+---
+
+# 14. RENDER / ADDON
+
+Catalog addon:
+
+```text
+data/av01-catalog.json
+```
+
+GitHub có phim mới **không đồng nghĩa Render đang dùng catalog mới**, vì addon hiện load catalog khi process khởi động.
+
+Do đó:
+
+- Scanner có thể tiếp tục push GitHub.
+- Không deploy Render giữa lúc quét nếu chưa được yêu cầu.
+- Khi cần đưa catalog mới live, deploy/restart service Render sau.
+
+---
+
+# 15. QUY TRÌNH KHÔI PHỤC TRÊN MÁY MỚI — COPY NGUYÊN KHỐI NÀY
+
+```cmd
+cd /d C:\Users\Trinh\Downloads
+git clone https://github.com/chuongnguyen89dn-ui/missav.git
+cd /d C:\Users\Trinh\Downloads\missav
+python -m pip install requests playwright
+python -m playwright install chromium
+python -m py_compile scripts\av01_hottest_filtered_proven.py
+SCAN-AV01-FULL.cmd
+```
+
+Nếu repo đã clone:
+
+```cmd
+cd /d C:\Users\Trinh\Downloads\missav
+git pull
+python -m py_compile scripts\av01_hottest_filtered_proven.py
+SCAN-AV01-FULL.cmd
+```
+
+---
+
+# 16. CHECKLIST TRƯỚC KHI NÓI “ĐÃ THÀNH CÔNG”
+
+Phải có ít nhất một trong các bằng chứng sau, tùy việc đang kiểm tra:
+
+- log `DIRECT TOKEN OK`;
+- log `DONE ... OK 200/200`;
+- accepted count tăng trong checkpoint;
+- commit `data(av01): publish verified batch through N movies`;
+- `data/av01-catalog.json` tăng count.
+
+Không dựa vào việc script “không crash” để kết luận thành công.
+
+---
+
+# 17. ĐIỂM BẮT ĐẦU CHO PHIÊN LÀM VIỆC SAU
+
+Khi được yêu cầu **“tiếp tục dự án AV01”**:
+
+1. Đọc file này.
+2. Đọc `scripts/av01_hottest_filtered_proven.py`.
+3. Kiểm tra các commit AV01 mới nhất.
+4. Kiểm tra `data/av01-catalog.json`.
+5. Nếu scanner đang chạy tốt thì không can thiệp.
+6. Nếu phải sửa resolver, tham khảo `scripts/av01-vlc-proof.mjs`.
+7. Bảo toàn direct-token baseline của commit `c909ebd`.
+
+**Không quay lại các scanner cũ đã thất bại.**
