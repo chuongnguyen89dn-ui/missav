@@ -511,7 +511,18 @@ def main():
                     time.sleep(delay)
 
             if next_i >= len(cs) and list_exhausted and not resolvers:
-                print("[SCAN] Hottest list exhausted and resolver queue empty", flush=True)
+                if pending:
+                    now=time.time(); ready=[p for p in pending if float(p.get("retry_after",0)) <= now]
+                    if not ready:
+                        time.sleep(1); continue
+                    retry=ready[:max(20,a.workers*2)]
+                    keys={(str(p.get("id") or "") or p.get("url","")) for p in retry}
+                    pending[:]=[p for p in pending if (str(p.get("id") or "") or p.get("url","")) not in keys]
+                    for p in retry: cs.append({"url":p["url"],"text":p.get("text",""),"poster":p.get("poster","")})
+                    print(f"[PASS 2] retry queued={len(retry)} pending_left={len(pending)}",flush=True)
+                    save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
+                    continue
+                print("[SCAN] Hottest list exhausted, pending empty, resolver queue empty", flush=True)
                 break
 
             # Keep resolver queue filled, but don't schedule more than needed.
