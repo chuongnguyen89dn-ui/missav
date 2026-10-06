@@ -451,10 +451,11 @@ def main():
                     except Exception as e:
                         msg = repr(e)
                         if "429" in msg:
-                            job["wait429_tries"] = job.get("wait429_tries", 0) + 1
-                            delay = min(120, 15 * job["wait429_tries"])
-                            job["retry_at"] = time.time() + delay
-                            print(f"  -> WAIT 429 {job['m']['code']} retry#{job['wait429_tries']} in {delay}s", flush=True)
+                            tries=job.get("wait429_tries",0)+1
+                            add_pending(pending,job["m"],"429 resolver",tries)
+                            print(f"  -> PENDING 429 {job['m']['code']} retry#{tries}; slot released",flush=True)
+                            job["ctx"].close(); resolvers.remove(job)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         else:
                             job["resolve_tries"] += 1
                             if job["resolve_tries"] <= 3:
@@ -481,10 +482,10 @@ def main():
                             print(f"     refresh error: {e!r}", flush=True)
                         job["deadline"] = time.time() + a.resolve_wait
                     else:
-                        print(f"  -> RESOLVE FAIL {m['code']}: no sv3/token after retries", flush=True)
-                        skipped.append({"url":m["url"],"code":m["code"],"official_tags":m["official_tags"],
-                                        "reason":"no sv3/token after retries"})
+                        add_pending(pending,m,"no sv3/token after retries",job["token_tries"])
+                        print(f"  -> PENDING TOKEN {m['code']}; slot released",flush=True)
                         job["ctx"].close(); resolvers.remove(job)
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
 
             if a.count > 0 and len(accepted) >= a.count:
                 break
@@ -550,9 +551,9 @@ def main():
                     print(f"[{idx}] {m['code']} year={year or '?'} tags={m['official_tags']}\n    prefer={keep or '-'} block={block or '-'}", flush=True)
 
                     if not m["official_tags"]:
-                        skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
-                                        "official_tags":[],"year":year,"reason":"official tags unavailable"})
-                        print(f"  -> META WAIT {m['code']}: official tags unavailable; leave pending for retry", flush=True)
+                        add_pending(pending,m,"official tags unavailable")
+                        print(f"  -> PENDING META {m['code']}: official tags unavailable; continue",flush=True)
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         ctx.close()
                     elif year not in (2024, 2025, 2026):
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
@@ -562,7 +563,9 @@ def main():
                             processed_ids.add(m["id"])
                             save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         else:
-                            print(f"  -> META WAIT {m['code']}: year unavailable; leave pending for retry", flush=True)
+                            add_pending(pending,m,"year unavailable")
+                            print(f"  -> PENDING META {m['code']}: year unavailable; continue",flush=True)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         ctx.close()
                     elif block:
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
@@ -579,8 +582,9 @@ def main():
                                           "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
                         print(f"  -> RESOLVE QUEUED {m['code']} | active={len(resolvers)}/{a.workers}", flush=True)
                 except Exception as e:
-                    skipped.append({"url":c["url"],"reason":"open/meta "+repr(e)})
-                    print(f"  -> FILTER ERROR {c['url']}: {e!r}", flush=True)
+                    add_pending(pending,c,"open/meta "+repr(e))
+                    print(f"  -> PENDING FILTER {c['url']}: {e!r}",flush=True)
+                    save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                     ctx.close()
             else:
                 # No new filter work can be scheduled now; keep browser event loop moving.
