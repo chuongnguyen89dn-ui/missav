@@ -254,6 +254,21 @@ def attach_capture(pg):
     pg.on("request", on_request)
     return state
 
+def get_direct_token(video_id):
+    """Use the proven AV01 geo.js -> cdn-access flow instead of relying on a player click."""
+    ua="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+    base="https://www.av01.media/"
+    g=requests.get("https://files.iw01.xyz/edge/geo.js?json",
+                   headers={"User-Agent":ua,"Origin":base.rstrip("/"),"Referer":base},timeout=15)
+    g.raise_for_status(); geo=g.json()
+    params={"token_v2":geo["token_v2"],"expires":str(geo["expires"]),"ip":geo["ip"]}
+    r=requests.get(f"https://customers.iw01.xyz/api/v1/videos/{video_id}/cdn-access",
+                   params=params,headers={"User-Agent":ua,"Accept":"application/json,*/*",
+                   "Origin":base.rstrip("/"),"Referer":base},timeout=15)
+    r.raise_for_status(); j=r.json()
+    if not j.get("access_token"): raise RuntimeError("cdn-access returned no access_token")
+    return j["access_token"]
+
 def trigger_player(pg):
     # Try actual video first, then likely play controls. Do not click arbitrary page buttons.
     for sel in ("video", '[aria-label*="play" i]', '[class*="play" i]', '[id*="play" i]'):
@@ -436,7 +451,11 @@ def main():
             m=dict(pnd["meta"])
             try:
                 ctx=browser.new_context(viewport={"width":1100,"height":760}); pg=ctx.new_page(); cap=attach_capture(pg)
-                pg.goto(m["url"],wait_until="domcontentloaded",timeout=45000); trigger_player(pg)
+                pg.goto(m["url"],wait_until="domcontentloaded",timeout=45000)
+                cap["token"]=get_direct_token(m["id"])
+                cap["sv"].append(f"https://www.av01.media/api/v1/videos/{m['id']}/manifest/index90-sv3-v1-a1.m3u8")
+                cap["ph"]={"User-Agent":"Mozilla/5.0","Referer":m["url"]}
+                cap["ch"]={"User-Agent":"Mozilla/5.0","Referer":"https://www.av01.media/"}
                 resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep_hits(m.get("official_tags",[])),
                                   "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
                 print(f"[TOKEN DIRECT] {m.get('code','')} | active={len(resolvers)}/{a.workers}",flush=True)
@@ -635,7 +654,20 @@ def main():
                         # Poster download is deferred to the later metadata cleanup pass; it must not
                         # consume bandwidth or delay stream qualification.
                         m["poster_file"] = ""
-                        trigger_player(pg)
+                        # Proven path: issue access_token directly via geo.js -> cdn-access.
+                        # Browser capture is kept only for the public sv3 manifest request.
+                        try:
+                            cap["token"] = get_direct_token(m["id"])
+                            cap["sv"].append(f"https://www.av01.media/api/v1/videos/{m['id']}/manifest/index90-sv3-v1-a1.m3u8")
+                            cap["ph"]={"User-Agent":"Mozilla/5.0","Referer":m["url"]}
+                            cap["ch"]={"User-Agent":"Mozilla/5.0","Referer":"https://www.av01.media/"}
+                            print(f"  -> DIRECT TOKEN OK {m['code']}",flush=True)
+                        except Exception as e:
+                            add_pending(pending,m,"direct token "+repr(e),0,"token")
+                            print(f"  -> PENDING DIRECT TOKEN {m['code']}: {e!r}",flush=True)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
+                            ctx.close()
+                            continue
                         resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep,
                                           "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
                         print(f"  -> RESOLVE QUEUED {m['code']} | active={len(resolvers)}/{a.workers}", flush=True)
