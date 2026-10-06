@@ -506,9 +506,15 @@ def main():
                         print(f"[LOAD MORE] end-of-site confirmed: API returned {item_count} items", flush=True)
                 else:
                     no_growth += 1
-                    delay = min(120, 15 * no_growth)
-                    print(f"[LOAD MORE WAIT] API unavailable; retry page={next_api_page} in {delay}s", flush=True)
+                    delay=min(120,15*no_growth)
+                    print(f"[LOAD MORE WAIT] API/network unavailable; retry page={next_api_page} in {delay}s",flush=True)
+                    save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
+                    write_heartbeat(heartbeat_file,status="network_or_api_wait",api_page=next_api_page,pending=len(pending),accepted=len(accepted),published=published_count)
                     time.sleep(delay)
+                    try:
+                        lp.reload(wait_until="domcontentloaded",timeout=45000)
+                    except Exception as e:
+                        print(f"[NETWORK WAIT] reload failed; will keep retrying: {e!r}",flush=True)
 
             if next_i >= len(cs) and list_exhausted and not resolvers:
                 if pending:
