@@ -13,6 +13,8 @@ HOT = "https://www.av01.media/en/videos/hottest"
 HEARTBEAT_INTERVAL = 30
 STALL_SECONDS = 300
 PENDING_RETRY_SECONDS = 180
+META_RETRY_SECONDS = 300
+TOKEN_RETRY_SECONDS = 900
 
 def write_heartbeat(path, **kw):
     try:
@@ -326,13 +328,20 @@ def save_state(path, run_id, accepted, skipped, processed_ids, published_count, 
     tmp.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
     tmp.replace(path)
 
-def add_pending(pending, item, reason, retry_count=0):
+def add_pending(pending, item, reason, retry_count=0, stage=None):
     key=str(item.get("id") or "") or item.get("url","")
     if not key: return
+    stage = stage or ("token" if ("token" in reason.lower() or "resolver" in reason.lower() or "429" in reason.lower()) else "meta")
+    delay = TOKEN_RETRY_SECONDS if stage == "token" else META_RETRY_SECONDS
+    base={"id":str(item.get("id") or ""),"url":item.get("url",""),"text":item.get("title") or item.get("text",""),
+          "poster":item.get("poster",""),"reason":reason,"stage":stage,"retry_count":retry_count,"retry_after":time.time()+delay}
+    # Preserve metadata for token retries so we never re-open/re-parse the detail page.
+    if stage == "token":
+        base["meta"]={k:v for k,v in item.items() if k not in ("playlist","metadata_file","poster_file")}
     for p in pending:
         if (str(p.get("id") or "") or p.get("url","")) == key:
-            p["reason"]=reason; p["retry_count"]=max(int(p.get("retry_count",0)),retry_count); p["retry_after"]=time.time()+PENDING_RETRY_SECONDS; return
-    pending.append({"id":str(item.get("id") or ""),"url":item.get("url",""),"text":item.get("title") or item.get("text",""),"poster":item.get("poster",""),"reason":reason,"retry_count":retry_count,"retry_after":time.time()+PENDING_RETRY_SECONDS})
+            p.update(base); p["retry_count"]=max(int(p.get("retry_count",0)),retry_count); return
+    pending.append(base)
 
 def remove_pending(pending, item):
     key=str(item.get("id") or "") or item.get("url","")
@@ -411,14 +420,29 @@ def main():
             try: lp.reload(wait_until="domcontentloaded", timeout=45000)
             except Exception as e: print(f"[LIST WAIT] reload: {e!r}", flush=True)
         if pending:
-            retry_cards=[{"url":p.get("url",""),"text":p.get("text",""),"poster":p.get("poster","")} for p in pending if p.get("url")]
+            # Only metadata failures go back through detail parsing. Token/resolver failures
+            # retain their parsed metadata and are resolved directly below.
+            retry_cards=[{"url":p.get("url",""),"text":p.get("text",""),"poster":p.get("poster","")} for p in pending if p.get("url") and p.get("stage","meta") == "meta"]
             seen={c.get("url","") for c in retry_cards}
             cs=retry_cards+[c for c in cs if c.get("url","") not in seen]
-            print(f"[PENDING FIRST] queued={len(retry_cards)} before new Hottest pages",flush=True)
+            print(f"[PENDING META FIRST] queued={len(retry_cards)}",flush=True)
         print(f"Candidates: {len(cs)} | resolver slots: {a.workers}", flush=True)
 
         next_i = 0
         resolvers = []
+        # Token failures with saved metadata bypass metadata parsing completely.
+        token_pending=[p for p in pending if p.get("stage") == "token" and isinstance(p.get("meta"),dict)]
+        for pnd in token_pending[:a.workers]:
+            m=dict(pnd["meta"])
+            try:
+                ctx=browser.new_context(viewport={"width":1100,"height":760}); pg=ctx.new_page(); cap=attach_capture(pg)
+                pg.goto(m["url"],wait_until="domcontentloaded",timeout=45000); trigger_player(pg)
+                resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep_hits(m.get("official_tags",[])),
+                                  "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
+                print(f"[TOKEN DIRECT] {m.get('code','')} | active={len(resolvers)}/{a.workers}",flush=True)
+            except Exception as e:
+                try: ctx.close()
+                except Exception: pass
 
         # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
         # while subsequent candidates are filtered. This avoids premature program exit.
@@ -467,7 +491,7 @@ def main():
                         msg = repr(e)
                         if "429" in msg:
                             tries=job.get("wait429_tries",0)+1
-                            add_pending(pending,job["m"],"429 resolver",tries)
+                            add_pending(pending,job["m"],"429 resolver",tries,"token")
                             print(f"  -> PENDING 429 {job['m']['code']} retry#{tries}; slot released",flush=True)
                             job["ctx"].close(); resolvers.remove(job)
                             save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
@@ -478,7 +502,7 @@ def main():
                                 job["retry_at"] = time.time() + delay
                                 print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
                             else:
-                                add_pending(pending,job["m"],"resolve "+msg,job["resolve_tries"])
+                                add_pending(pending,job["m"],"resolve "+msg,job["resolve_tries"],"token")
                                 print(f"  -> PENDING RESOLVE {job['m']['code']} after retries; slot released: {msg}",flush=True)
                                 job["ctx"].close(); resolvers.remove(job)
                                 save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
@@ -495,7 +519,7 @@ def main():
                             print(f"     refresh error: {e!r}", flush=True)
                         job["deadline"] = time.time() + a.resolve_wait
                     else:
-                        add_pending(pending,m,"no sv3/token after retries",job["token_tries"])
+                        add_pending(pending,m,"no sv3/token after retries",job["token_tries"],"token")
                         print(f"  -> PENDING TOKEN {m['code']}; slot released",flush=True)
                         job["ctx"].close(); resolvers.remove(job)
                         save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
@@ -608,7 +632,9 @@ def main():
                         print(f"  -> BLOCKED {m['code']} {block}", flush=True)
                         ctx.close()
                     else:
-                        m["poster_file"] = download_poster(m, out)
+                        # Poster download is deferred to the later metadata cleanup pass; it must not
+                        # consume bandwidth or delay stream qualification.
+                        m["poster_file"] = ""
                         trigger_player(pg)
                         resolvers.append({"ctx":ctx,"pg":pg,"cap":cap,"m":m,"keep":keep,
                                           "deadline":time.time()+a.resolve_wait,"resolve_tries":0,"token_tries":0,"retry_at":0})
