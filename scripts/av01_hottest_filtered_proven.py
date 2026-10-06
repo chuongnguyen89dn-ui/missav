@@ -12,6 +12,7 @@ import requests
 HOT = "https://www.av01.media/en/videos/hottest"
 HEARTBEAT_INTERVAL = 30
 STALL_SECONDS = 300
+PENDING_RETRY_SECONDS = 60
 
 def write_heartbeat(path, **kw):
     try:
@@ -319,10 +320,19 @@ def finish_resolve(job, outdir):
     job["m"]["metadata_file"] = str(meta_file.resolve())
     return job["m"], checks
 
-def save_state(path, run_id, accepted, skipped, processed_ids, published_count):
+def save_state(path, run_id, accepted, skipped, processed_ids, published_count, next_i=0, next_api_page=1, pending=None, list_exhausted=False):
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"run_id":run_id,"source":HOT,"accepted":accepted,"skipped":skipped,"processed_ids":sorted(processed_ids),"published_count":published_count},ensure_ascii=False,indent=2),encoding="utf-8")
+    payload={"run_id":run_id,"source":HOT,"accepted":accepted,"skipped":skipped,"processed_ids":sorted(processed_ids),"published_count":published_count,"next_i":next_i,"next_api_page":next_api_page,"pending":pending or [],"list_exhausted":bool(list_exhausted)}
+    tmp.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
     tmp.replace(path)
+
+def add_pending(pending, item, reason, retry_count=0):
+    key=str(item.get("id") or "") or item.get("url","")
+    if not key: return
+    for p in pending:
+        if (str(p.get("id") or "") or p.get("url","")) == key:
+            p["reason"]=reason; p["retry_count"]=max(int(p.get("retry_count",0)),retry_count); p["retry_after"]=time.time()+PENDING_RETRY_SECONDS; return
+    pending.append({"id":str(item.get("id") or ""),"url":item.get("url",""),"text":item.get("title") or item.get("text",""),"poster":item.get("poster",""),"reason":reason,"retry_count":retry_count,"retry_after":time.time()+PENDING_RETRY_SECONDS})
 
 def publish_batch(repo_root, accepted, run_id):
     n=(len(accepted)//20)*20
@@ -357,12 +367,14 @@ def main():
     state_file=out/"checkpoint.json"
     run_id="av01-clean-en-hottest-20261005"
     accepted, skipped, processed_ids, published_count = [], [], set(), 0
+    pending=[]; resume_api_page=0
     if state_file.exists():
         st=json.loads(state_file.read_text(encoding="utf-8"))
         if st.get("run_id")==run_id and st.get("source")==HOT:
             accepted=st.get("accepted",[]); skipped=st.get("skipped",[])
             processed_ids=set(st.get("processed_ids",[])); published_count=int(st.get("published_count",0))
-            print(f"[RESUME] processed={len(processed_ids)} accepted={len(accepted)} published={published_count}",flush=True)
+            pending=st.get("pending",[]) or []; resume_api_page=int(st.get("next_api_page",0) or 0)
+            print(f"[RESUME] processed={len(processed_ids)} accepted={len(accepted)} published={published_count} pending={len(pending)} api_page={resume_api_page or 'auto'}",flush=True)
         else:
             state_file.unlink()
     else:
@@ -397,25 +409,25 @@ def main():
         # Filtering is sequential/reliable; accepted resolvers remain alive and are polled
         # while subsequent candidates are filtered. This avoids premature program exit.
         no_growth = 0
-        next_api_page = len(cs) // 20 + 1
+        next_api_page = resume_api_page or (len(cs) // 20 + 1)
         list_exhausted = False
         heartbeat_file = out/"heartbeat.json"
         last_progress = time.time()
         last_heartbeat = 0
-        last_snapshot = (next_i, len(cs), len(accepted), len(processed_ids), next_api_page)
+        last_snapshot = (len(cs), len(accepted), len(processed_ids), len(pending))
         while True:
             now_ts=time.time()
-            snapshot=(next_i,len(cs),len(accepted),len(processed_ids),next_api_page)
+            snapshot=(len(cs),len(accepted),len(processed_ids),len(pending))
             if snapshot != last_snapshot:
                 last_progress=now_ts; last_snapshot=snapshot
             if now_ts-last_heartbeat >= HEARTBEAT_INTERVAL:
                 write_heartbeat(heartbeat_file,status="running",next_i=next_i,candidates=len(cs),
-                                accepted=len(accepted),processed=len(processed_ids),resolvers=len(resolvers),
-                                api_page=next_api_page,seconds_without_progress=int(now_ts-last_progress))
+                                accepted=len(accepted),processed=len(processed_ids),pending=len(pending),resolvers=len(resolvers),
+                                published=published_count,api_page=next_api_page,seconds_without_progress=int(now_ts-last_progress))
                 last_heartbeat=now_ts
             if now_ts-last_progress >= STALL_SECONDS:
                 print(f"[WATCHDOG] no progress for {STALL_SECONDS}s; saving checkpoint and restarting process",flush=True)
-                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                 write_heartbeat(heartbeat_file,status="watchdog_restart",accepted=len(accepted),
                                 processed=len(processed_ids),api_page=next_api_page)
                 raise SystemExit(75)
@@ -431,7 +443,7 @@ def main():
                             if len(accepted) >= published_count + 20:
                                 published_count=publish_batch(repo_root,accepted,run_id)
                                 print(f"  -> GITHUB PUBLISHED {published_count}",flush=True)
-                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                             print(f"  -> DONE {len(accepted)} {m['code']} {m['probe']}", flush=True)
                             job["ctx"].close(); resolvers.remove(job)
                         else:
@@ -453,7 +465,7 @@ def main():
                                 skipped.append({"id":job["m"]["id"],"url":job["m"]["url"],"code":job["m"]["code"],
                                                 "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
                                 processed_ids.add(job["m"]["id"])
-                                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                                 print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
                                 job["ctx"].close(); resolvers.remove(job)
                 elif not (cap["sv"] and cap["token"]) and time.time() >= job["deadline"]:
@@ -548,7 +560,7 @@ def main():
                                         "reason":"year not 2024-2026" if year else "year unavailable"})
                         if year:
                             processed_ids.add(m["id"])
-                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                            save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         else:
                             print(f"  -> META WAIT {m['code']}: year unavailable; leave pending for retry", flush=True)
                         ctx.close()
@@ -557,7 +569,7 @@ def main():
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"BLOCK "+",".join(block)})
                         processed_ids.add(m["id"])
-                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count)
+                        save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         print(f"  -> BLOCKED {m['code']} {block}", flush=True)
                         ctx.close()
                     else:
