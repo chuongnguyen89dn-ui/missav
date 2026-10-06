@@ -463,12 +463,10 @@ def main():
                                 job["retry_at"] = time.time() + delay
                                 print(f"  -> RESOLVE RETRY {job['resolve_tries']}/3 {job['m']['code']} in {delay}s: {msg}", flush=True)
                             else:
-                                skipped.append({"id":job["m"]["id"],"url":job["m"]["url"],"code":job["m"]["code"],
-                                                "official_tags":job["m"]["official_tags"],"reason":"resolve "+msg})
-                                processed_ids.add(job["m"]["id"])
-                                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
-                                print(f"  -> RESOLVE FAIL {job['m']['code']} after retries: {msg}", flush=True)
+                                add_pending(pending,job["m"],"resolve "+msg,job["resolve_tries"])
+                                print(f"  -> PENDING RESOLVE {job['m']['code']} after retries; slot released: {msg}",flush=True)
                                 job["ctx"].close(); resolvers.remove(job)
+                                save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                 elif not (cap["sv"] and cap["token"]) and time.time() >= job["deadline"]:
                     m = job["m"]
                     job["token_tries"] += 1
