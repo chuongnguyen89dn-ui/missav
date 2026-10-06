@@ -12,7 +12,7 @@ import requests
 HOT = "https://www.av01.media/en/videos/hottest"
 HEARTBEAT_INTERVAL = 30
 STALL_SECONDS = 300
-PENDING_RETRY_SECONDS = 60
+PENDING_RETRY_SECONDS = 180
 
 def write_heartbeat(path, **kw):
     try:
@@ -334,6 +334,11 @@ def add_pending(pending, item, reason, retry_count=0):
             p["reason"]=reason; p["retry_count"]=max(int(p.get("retry_count",0)),retry_count); p["retry_after"]=time.time()+PENDING_RETRY_SECONDS; return
     pending.append({"id":str(item.get("id") or ""),"url":item.get("url",""),"text":item.get("title") or item.get("text",""),"poster":item.get("poster",""),"reason":reason,"retry_count":retry_count,"retry_after":time.time()+PENDING_RETRY_SECONDS})
 
+def remove_pending(pending, item):
+    key=str(item.get("id") or "") or item.get("url","")
+    if not key: return
+    pending[:]=[p for p in pending if (str(p.get("id") or "") or p.get("url","")) != key]
+
 def publish_batch(repo_root, accepted, run_id):
     n=(len(accepted)//20)*20
     if not n: return 0
@@ -351,9 +356,9 @@ def publish_batch(repo_root, accepted, run_id):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--count", type=int, default=0, help="0 = scan all Hottest pages")
-    ap.add_argument("--workers", type=int, default=10)
-    ap.add_argument("--tag-wait", type=float, default=4.0)
-    ap.add_argument("--resolve-wait", type=float, default=12.0)
+    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--tag-wait", type=float, default=10.0)
+    ap.add_argument("--resolve-wait", type=float, default=20.0)
     ap.add_argument("--out", default="av01_hottest_filtered_20")
     a = ap.parse_args()
 
@@ -373,7 +378,11 @@ def main():
         if st.get("run_id")==run_id and st.get("source")==HOT:
             accepted=st.get("accepted",[]); skipped=st.get("skipped",[])
             processed_ids=set(st.get("processed_ids",[])); published_count=int(st.get("published_count",0))
-            pending=st.get("pending",[]) or []; resume_api_page=int(st.get("next_api_page",0) or 0)
+            pending=st.get("pending",[]) or []
+            saved_api_page=int(st.get("next_api_page",0) or 0)
+            # Re-fetch the previous API page on resume so candidates loaded but not yet
+            # processed before a stop/crash are not skipped.
+            resume_api_page=max(2,saved_api_page-1) if saved_api_page else 0
             print(f"[RESUME] processed={len(processed_ids)} accepted={len(accepted)} published={published_count} pending={len(pending)} api_page={resume_api_page or 'auto'}",flush=True)
         else:
             state_file.unlink()
@@ -401,6 +410,11 @@ def main():
             time.sleep(delay)
             try: lp.reload(wait_until="domcontentloaded", timeout=45000)
             except Exception as e: print(f"[LIST WAIT] reload: {e!r}", flush=True)
+        if pending:
+            retry_cards=[{"url":p.get("url",""),"text":p.get("text",""),"poster":p.get("poster","")} for p in pending if p.get("url")]
+            seen={c.get("url","") for c in retry_cards}
+            cs=retry_cards+[c for c in cs if c.get("url","") not in seen]
+            print(f"[PENDING FIRST] queued={len(retry_cards)} before new Hottest pages",flush=True)
         print(f"Candidates: {len(cs)} | resolver slots: {a.workers}", flush=True)
 
         next_i = 0
@@ -439,6 +453,7 @@ def main():
                         m, checks = finish_resolve(job, out)
                         if len(checks) >= 2 and all(x == 200 for x in checks[:2]):
                             if m["id"] not in {x.get("id") for x in accepted}: accepted.append(m)
+                            remove_pending(pending,m)
                             processed_ids.add(m["id"])
                             if len(accepted) >= published_count + 20:
                                 published_count=publish_batch(repo_root,accepted,run_id)
@@ -575,6 +590,7 @@ def main():
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"year not 2024-2026" if year else "year unavailable"})
                         if year:
+                            remove_pending(pending,m)
                             processed_ids.add(m["id"])
                             save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         else:
@@ -586,6 +602,7 @@ def main():
                         skipped.append({"id":m["id"],"code":m["code"],"url":m["url"],"title":m["title"],
                                         "official_tags":m["official_tags"],"year":year,
                                         "reason":"BLOCK "+",".join(block)})
+                        remove_pending(pending,m)
                         processed_ids.add(m["id"])
                         save_state(state_file,run_id,accepted,skipped,processed_ids,published_count,next_i,next_api_page,pending,list_exhausted)
                         print(f"  -> BLOCKED {m['code']} {block}", flush=True)
