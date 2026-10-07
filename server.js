@@ -14,10 +14,11 @@ av01Movies=av01Movies.map(x=>{
  const enriched=av01Enriched.get(String(x.id));
  return enriched?{...x,...enriched}:x;
 });
-const av01ExistingIds=new Set(av01Movies.map(x=>String(x.id)));
-for(const x of (av01Test20.movies||[])){
- if(!av01ExistingIds.has(String(x.id)))av01Movies.push(x);
-}
+const av01BaseById=new Map(av01Movies.map(x=>[String(x.id),x]));
+av01Movies=[
+ ...(av01Test20.movies||[]),
+ ...av01Movies.filter(x=>!av01Enriched.has(String(x.id)))
+].map(x=>av01Enriched.has(String(x.id))?{...av01BaseById.get(String(x.id)),...x}:x);
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
 function av01Meta(x){
  const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
@@ -70,7 +71,7 @@ function filmMeta(f){
  };
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
-const publicManifest={id:'community.missav.hls.test',version:'0.6.5',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
+const publicManifest={id:'community.missav.hls.test',version:'0.6.3-av01-native-stream',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
 function normalizeIkisodaMovie(x){
  const code=String(x?.code||x?.id||'').replace(/^ikisoda:/i,'').trim();
  if(!code)return null;
