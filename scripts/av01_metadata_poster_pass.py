@@ -116,7 +116,9 @@ def extract_page(pg, vid, old):
     description=mfirst("og:description","description","twitter:description")
     poster=mfirst("og:image","twitter:image") or str(video_ld.get("thumbnailUrl") or "")
     if not poster:
-        poster=f"{BASE}/media/videos/tmb/{vid}/1.jpg"
+        imgs=d.get("images") or []
+        candidates=[x.get("src") for x in imgs if x.get("src") and int(x.get("width") or 0)>=240 and int(x.get("height") or 0)>=120]
+        poster=candidates[0] if candidates else ""
 
     # Keep both normalized useful fields and raw page metadata so no available metadata is discarded.
     result={
@@ -125,7 +127,7 @@ def extract_page(pg, vid, old):
       "title":title,
       "description":description,
       "poster":poster,
-      "poster_stable":f"{BASE}/media/videos/tmb/{vid}/1.jpg",
+      "poster_stable":poster,
       "official_tags":[x["name"] for x in tags],
       "official_tag_refs":tags,
       "upload_date":str(video_ld.get("uploadDate") or video_ld.get("datePublished") or ""),
@@ -178,12 +180,12 @@ def publish_batch(results, cp, force=False):
     atomic_json(PUBLISH_PATH,payload)
     try:
         # Rebase immediately before publication so a long metadata run can coexist with link-scanner pushes.
-        git_run("pull","--rebase","origin","main")
+        git_run("pull","--rebase","origin","av01-metadata-poster-pass")
         git_run("add",str(PUBLISH_PATH).replace("\\","/"))
         status=git_run("status","--porcelain",check=False).stdout
         if str(PUBLISH_PATH).replace("\\","/") in status:
             git_run("commit","-m",f"data(av01): publish metadata/poster through {target} movies")
-        git_run("push","origin","main")
+        git_run("push","origin","HEAD:av01-metadata-poster-pass")
         cp["published_count"]=target
         cp["last_publish_at"]=now()
         print(f"[META PUBLISHED] {target}",flush=True)
@@ -228,7 +230,7 @@ def main():
                 if time.time()-last<RETRY_SECONDS: continue
             try:
                 meta=extract_page(pg,vid,old)
-                probe=poster_probe(meta.get("poster_stable") or meta.get("poster"))
+                probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
                 meta["poster_probe"]=probe
                 if not meta.get("title") or not meta.get("official_tags"):
                     raise RuntimeError("metadata incomplete: missing title/tags")
