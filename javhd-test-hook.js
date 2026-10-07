@@ -95,12 +95,15 @@ function upstreamHeaders() {
   };
 }
 
-async function fetchUpstream(id, target, force = false) {
+async function fetchUpstream(id, target, force = false, reqHeaders = {}) {
   const s = await getSession(id, force);
+  const headers = { ...upstreamHeaders() };
+  if (reqHeaders.range) headers.Range = reqHeaders.range;
+  if (reqHeaders['if-range']) headers['If-Range'] = reqHeaders['if-range'];
   return fetch(signUrl(target, s), {
-    headers: upstreamHeaders(),
+    headers,
     redirect: 'follow',
-    signal: AbortSignal.timeout(8000)
+    signal: AbortSignal.timeout(25000)
   });
 }
 
@@ -171,17 +174,38 @@ async function avProxyTarget(req, res, id, target) {
   if (!u.hostname.endsWith('iw01.xyz')) throw new Error('AV01 target host rejected');
 
   let r;
-  try {
-    r = await fetchUpstream(id, u.toString(), false);
-    if ([502, 503, 504].includes(r.status)) r = await fetchUpstream(id, u.toString(), true);
-  } catch (e) {
-    console.error('[AV01_NATIVE_FETCH_ERROR]', JSON.stringify({ id, path: u.pathname, error: safeErr(e) }));
+  const started = Date.now();
+  const reqHeaders = {
+    range: req.headers.range,
+    'if-range': req.headers['if-range']
+  };
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      r = await fetchUpstream(id, u.toString(), attempt > 1, reqHeaders);
+      console.log('[AV01_NATIVE_FETCH_ATTEMPT]', JSON.stringify({
+        id, path: u.pathname, attempt, status: r.status, ms: Date.now() - started
+      }));
+      if (![502, 503, 504].includes(r.status) || attempt === 3) break;
+      try { await r.body?.cancel(); } catch {}
+    } catch (e) {
+      lastError = e;
+      console.error('[AV01_NATIVE_FETCH_RETRY]', JSON.stringify({
+        id, path: u.pathname, attempt, ms: Date.now() - started, error: safeErr(e)
+      }));
+      if (attempt < 3) continue;
+    }
+  }
+  if (!r) {
+    console.error('[AV01_NATIVE_FETCH_ERROR]', JSON.stringify({
+      id, path: u.pathname, attempts: 3, ms: Date.now() - started, error: safeErr(lastError)
+    }));
     res.writeHead(504, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
-    return res.end('AV01 upstream timeout\n');
+    return res.end('AV01 upstream timeout after retries\n');
   }
 
   const type = r.headers.get('content-type') || 'application/octet-stream';
-  console.log('[AV01_NATIVE_FETCH]', JSON.stringify({ id, status: r.status, path: u.pathname }));
+  console.log('[AV01_NATIVE_FETCH]', JSON.stringify({ id, status: r.status, path: u.pathname, ms: Date.now() - started }));
 
   if (!r.ok) {
     res.writeHead(r.status, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
@@ -203,9 +227,13 @@ async function avProxyTarget(req, res, id, target) {
   const len = r.headers.get('content-length');
   const range = r.headers.get('content-range');
   const acceptRanges = r.headers.get('accept-ranges');
+  const etag = r.headers.get('etag');
+  const lastModified = r.headers.get('last-modified');
   if (len) headers['content-length'] = len;
   if (range) headers['content-range'] = range;
   if (acceptRanges) headers['accept-ranges'] = acceptRanges;
+  if (etag) headers.etag = etag;
+  if (lastModified) headers['last-modified'] = lastModified;
 
   res.writeHead(r.status, headers);
   if (req.method === 'HEAD' || !r.body) return res.end();
