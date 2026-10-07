@@ -50,7 +50,7 @@ def load_catalog():
 def extract_page(pg, vid, old):
     # Open by known catalog URL first; numeric-ID fallback is stable enough for redirect/canonical discovery.
     u=old.get("url") or f"{BASE}/en/video/{vid}/"
-    pg.goto(u,wait_until="domcontentloaded",timeout=45000)
+    pg.goto(u,wait_until="domcontentloaded",timeout=25000)
     try: pg.wait_for_load_state("networkidle",timeout=8000)
     except Exception: pass
     pg.wait_for_timeout(1500)
