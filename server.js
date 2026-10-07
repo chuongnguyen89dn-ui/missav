@@ -14,6 +14,10 @@ av01Movies=av01Movies.map(x=>{
  const enriched=av01Enriched.get(String(x.id));
  return enriched?{...x,...enriched}:x;
 });
+const av01ExistingIds=new Set(av01Movies.map(x=>String(x.id)));
+for(const x of (av01Test20.movies||[])){
+ if(!av01ExistingIds.has(String(x.id)))av01Movies.push(x);
+}
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
 function av01Meta(x){
  const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
