@@ -38,9 +38,11 @@ def probe(url):
         for c in r.iter_content(65536):
             n+=len(c)
             if n>=131072: break
-        return {"ok":r.status_code==200 and ct.startswith("image/") and n>0,
+        final=r.url
+        placeholder=("noimage" in final.lower() or "now_printing" in final.lower())
+        return {"ok":r.status_code==200 and ct.startswith("image/") and n>0 and not placeholder,
                 "status":r.status_code,"content_type":ct,"bytes_checked":n,
-                "final_url":r.url}
+                "placeholder":placeholder,"final_url":final}
     except Exception as e:
         return {"ok":False,"error":repr(e)}
 
