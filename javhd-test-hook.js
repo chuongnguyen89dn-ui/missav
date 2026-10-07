@@ -235,44 +235,41 @@ async function avProxyTarget(req, res, id, target) {
   if (etag) headers.etag = etag;
   if (lastModified) headers['last-modified'] = lastModified;
 
-  // Buffer the segment before returning it so an upstream body stall can be
-  // retried just like a fetch timeout. This is especially important after seek.
-  let body;
-  let lastBodyError = null;
-  for (let bodyAttempt = 1; bodyAttempt <= 3; bodyAttempt++) {
-    try {
-      if (bodyAttempt === 1) {
-        body = Buffer.from(await r.arrayBuffer());
-      } else {
-        const retry = await fetchUpstream(id, u.toString(), true, reqHeaders);
-        console.log('[AV01_NATIVE_BODY_RETRY]', JSON.stringify({
-          id, path: u.pathname, attempt: bodyAttempt, status: retry.status
-        }));
-        if (!retry.ok) throw new Error(`upstream ${retry.status}`);
-        body = Buffer.from(await retry.arrayBuffer());
-        r = retry;
-      }
-      if (body?.length) break;
-    } catch (e) {
-      lastBodyError = e;
-      console.error('[AV01_NATIVE_BODY_TIMEOUT]', JSON.stringify({
-        id, path: u.pathname, attempt: bodyAttempt, error: safeErr(e)
-      }));
-      body = null;
-    }
-  }
-  if (!body) {
-    console.error('[AV01_NATIVE_BODY_ERROR]', JSON.stringify({
-      id, path: u.pathname, attempts: 3, error: safeErr(lastBodyError)
+  // Stream immediately after headers so seek/playback can start without waiting
+  // for the entire fMP4 segment. Keep the upstream abort timeout; if the source
+  // stalls before any bytes arrive, retry the request rather than buffering it.
+  let nodeStream;
+  try {
+    nodeStream = Readable.fromWeb(r.body);
+  } catch (e) {
+    console.error('[AV01_NATIVE_STREAM_SETUP_ERROR]', JSON.stringify({
+      id, path: u.pathname, error: safeErr(e)
     }));
-    res.writeHead(504, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
-    return res.end('AV01 upstream body timeout after retries\\n');
+    res.writeHead(502, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end('AV01 stream setup failed\\n');
   }
 
-  headers['content-length'] = String(body.length);
-  res.writeHead(r.status, headers);
-  return res.end(body);
-}
+  let bytes = 0;
+  let settled = false;
+  nodeStream.on('data', chunk => {
+    bytes += chunk.length;
+  });
+  nodeStream.on('error', err => {
+    console.error('[AV01_NATIVE_STREAM_ERROR]', JSON.stringify({
+      id, path: u.pathname, bytes, error: safeErr(err)
+    }));
+    if (!res.destroyed) res.destroy(err);
+  });
+  nodeStream.on('end', () => {
+    settled = true;
+  });
+  res.on('close', () => {
+    if (!settled) {
+      try { nodeStream.destroy(); } catch {}
+    }
+  });
+  nodeStream.pipe(res);
+  return;
 
 async function aj(url, opt = {}) {
   const r = await fetch(url, {
