@@ -104,7 +104,7 @@ function upstreamHeaders() {
   };
 }
 
-async function fetchUpstream(id, target, force = false, reqHeaders = {}) {
+async function fetchUpstream(id, target, force = false, reqHeaders = {}, timeoutMs = 25000) {
   const s = await getSession(id, force);
   const headers = { ...upstreamHeaders() };
   if (reqHeaders.range) headers.Range = reqHeaders.range;
@@ -112,7 +112,7 @@ async function fetchUpstream(id, target, force = false, reqHeaders = {}) {
   return fetch(signUrl(target, s), {
     headers,
     redirect: 'follow',
-    signal: AbortSignal.timeout(25000)
+    signal: AbortSignal.timeout(timeoutMs)
   });
 }
 
@@ -220,16 +220,23 @@ async function avProxyTarget(req, res, id, target) {
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      r = await fetchUpstream(id, u.toString(), attempt > 1, reqHeaders);
+      // Fail over quickly when a CDN edge is slow to return headers. The final
+      // attempt keeps the long timeout so weak/slow sources still have a chance.
+      const attemptStarted = Date.now();
+      const headerTimeout = attempt === 1 ? 900 : attempt === 2 ? 1800 : 25000;
+      r = await fetchUpstream(id, u.toString(), attempt > 1, reqHeaders, headerTimeout);
       console.log('[AV01_NATIVE_FETCH_ATTEMPT]', JSON.stringify({
-        id, path: u.pathname, attempt, status: r.status, ms: Date.now() - started
+        id, path: u.pathname, attempt, status: r.status,
+        attemptMs: Date.now() - attemptStarted, ms: Date.now() - started
       }));
       if (![502, 503, 504].includes(r.status) || attempt === 3) break;
       try { await r.body?.cancel(); } catch {}
     } catch (e) {
       lastError = e;
       console.error('[AV01_NATIVE_FETCH_RETRY]', JSON.stringify({
-        id, path: u.pathname, attempt, ms: Date.now() - started, error: safeErr(e)
+        id, path: u.pathname, attempt, ms: Date.now() - started,
+        reason: attempt < 3 ? 'slow-or-failed-edge' : 'final-failure',
+        error: safeErr(e)
       }));
       if (attempt < 3) continue;
     }
