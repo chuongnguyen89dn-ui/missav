@@ -5,9 +5,19 @@ const verifiedMetadata = JSON.parse(readFileSync(new URL('./data/metadata-verifi
 const rawScan = Object.fromEntries(verified.map(f=>[f.url,f]));
 let av01Catalog={movies:[]};
 try{av01Catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',import.meta.url),'utf8'));}catch{}
-const av01Movies=Array.isArray(av01Catalog)?av01Catalog:(av01Catalog.movies||[]);
+let av01Movies=Array.isArray(av01Catalog)?av01Catalog:(av01Catalog.movies||[]);
+let av01Test20={movies:[]};try{av01Test20=JSON.parse(readFileSync(new URL('./data/av01-addon-test20.json',import.meta.url),'utf8'));}catch{}
+const av01Enriched=new Map((av01Test20.movies||[]).map(x=>[String(x.id),x]));
+av01Movies=av01Movies.map(x=>av01Enriched.has(String(x.id))?{...x,...av01Enriched.get(String(x.id))}:x);
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
-function av01Meta(x){return {id:'av01:'+x.id,type:'movie',name:x.title||x.dvd_id||('AV01 '+x.id),poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),genre:(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),cast:(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean),language:'Tiếng Nhật'};}
+function av01Meta(x){
+ const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
+ const cast=(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
+ const date=x.release_date||x.upload_date||'';
+ const links=[...cast.map(name=>({name,category:'actor',url:'stremio:///search?search='+encodeURIComponent(name)})),...genres.map(name=>({name,category:'genre',url:'stremio:///search?search='+encodeURIComponent(name)}))];
+ const m={id:'av01:'+x.id,type:'movie',name:x.title||x.dvd_id||('AV01 '+x.id),poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:date?String(date).slice(0,4):(x.year?String(x.year):undefined),released:date?new Date(date).toISOString():undefined,genres,genre:genres,cast:cast.length?cast:undefined,director:x.maker?.name?[x.maker.name]:undefined,links,language:'Tiếng Nhật'};
+ return Object.fromEntries(Object.entries(m).filter(([,v])=>v!==undefined&&v!==''));
+}}
 const IKISODA_CATALOG_URL='https://raw.githubusercontent.com/chuongnguyen89dn-ui/missav/ikisoda-data/data/ikisoda-catalog.json';
 let ikisodaCache={data:JSON.parse(readFileSync(new URL('./data/ikisoda-catalog.json',import.meta.url),'utf8')),at:0};
 async function getIkisodaCatalog(){
