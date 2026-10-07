@@ -61,7 +61,7 @@ function filmMeta(f){
  };
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
-const publicManifest={id:'community.missav.hls.test',version:'0.6.3-av01-native-stream',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
+const publicManifest={id:'community.missav.hls.test',version:'0.6.4-av01-metadata-refresh',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
 function normalizeIkisodaMovie(x){
  const code=String(x?.code||x?.id||'').replace(/^ikisoda:/i,'').trim();
  if(!code)return null;
@@ -229,7 +229,7 @@ const VIDEO = 'https://surrit.com/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/1080p/vid
 const REF = 'https://missav.ws/';
 const id = 'missav:fthtd-213';
 const cors = {'access-control-allow-origin':'*','access-control-allow-methods':'GET, HEAD, OPTIONS','access-control-allow-headers':'*'};
-function json(res, data, status=200) { const body=JSON.stringify(data);res.writeHead(status, {...cors,'content-type':'application/json; charset=utf-8','content-length':Buffer.byteLength(body)});res.end(body); }
+function json(res, data, status=200) { const body=JSON.stringify(data);res.writeHead(status, {...cors,'content-type':'application/json; charset=utf-8','cache-control':'no-store, no-cache, must-revalidate, proxy-revalidate','pragma':'no-cache','expires':'0','surrogate-control':'no-store','content-length':Buffer.byteLength(body)});res.end(body); }
 const manifest={id:'community.missav.hls.test',version:'0.1.2',name:'MissAV HLS Test',description:'Isolated 1080p page-Referer HLS proxy test',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-test',name:'Test 1080p'}],idPrefixes:['missav:']};
 const meta={id,type:'movie',name:'FTHTD-213 — 1080p test',description:'Surrit HLS; playback requires Referer https://missav.ws/'};
 const MIRROR_DIRECT = 'https://surrit.mrstcdn.store/d20f4a25-16db-4cd0-86bd-c02ee44cfa98/1080p/video.m3u8';
