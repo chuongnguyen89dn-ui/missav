@@ -9,16 +9,6 @@ let catalog={movies:[]};
 try{catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',import.meta.url),'utf8'));}catch{}
 let movies=Array.isArray(catalog)?catalog:(catalog.movies||[]);
 
-// The 20 metadata-pass records enrich the same scanner catalog by AV01 id.
-// They are not exposed as a second/test catalog.
-let metadata20={movies:[]};
-try{metadata20=JSON.parse(readFileSync(new URL('./data/av01-addon-test20.json',import.meta.url),'utf8'));}catch{}
-const enriched=new Map((metadata20.movies||[]).map(x=>[String(x.id),x]));
-movies=movies.map(x=>{
-  const e=enriched.get(String(x.id));
-  if(!e)return x;
-  return {...x,...e,id:x.id,poster:e.poster||x.poster||x.cover||undefined};
-});
 const byId=new Map(movies.map(x=>['av01:'+String(x.id),x]));
 
 function meta(x){
@@ -53,7 +43,7 @@ const manifest={
 http.createServer(async(req,res)=>{
   const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
-  if(path==='/'||path==='/health')return json(res,{status:'ok',movies:movies.length,enriched:movies.filter(x=>enriched.has(String(x.id))).length});
+  if(path==='/'||path==='/health')return json(res,{status:'ok',movies:movies.length});
   if(path==='/manifest.json')return json(res,manifest);
   if(path==='/catalog/movie/av01-filtered.json')return json(res,{metas:movies.map(meta)});
   if(path.startsWith('/meta/movie/av01:')&&path.endsWith('.json')){
@@ -64,6 +54,5 @@ http.createServer(async(req,res)=>{
     const x=byId.get(path.slice('/stream/movie/'.length,-5));
     return x?json(res,{streams:[{name:'AV01 1080p',title:'AV01 source',externalUrl:x.page_url||('https://www.av01.media/en/video/'+x.id)}]}):json(res,{streams:[]});
   }
-  if(path==='/__av01_status.json')return json(res,{movies:movies.length,metadata20_loaded:enriched.size,metadata20_matched:movies.filter(x=>enriched.has(String(x.id))).length});
   return json(res,{error:'Not found'},404);
 }).listen(PORT,'0.0.0.0',()=>console.log('AV01 addon listening on '+PORT));
