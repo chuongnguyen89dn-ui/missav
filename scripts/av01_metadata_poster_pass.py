@@ -264,6 +264,16 @@ def main():
             "incomplete":sum(1 for x in results.values() if not x.get("metadata_complete")),
             "failures":failures,"updated_at":now()}
     atomic_json(out/"report.json",report)
+    if args.test20:
+        atomic_json(ROOT/"data"/"av01-metadata-test20-report.json",report)
+        atomic_json(ROOT/"data"/"av01-metadata-test20-results.json",results)
+        try:
+            git_run("add","data/av01-metadata-test20-report.json","data/av01-metadata-test20-results.json")
+            git_run("commit","-m","test(av01): save latest metadata test20 results",check=False)
+            git_run("push","origin","HEAD:av01-metadata-poster-pass")
+            print("[GITHUB] TEST20 RESULTS PUSHED",flush=True)
+        except Exception as e:
+            print(f"[GITHUB ERROR] {e!r}",flush=True)
     print(f"[META DONE] attempted={report['attempted']} records={report['records']} complete={report['complete']} incomplete={report['incomplete']} errors={report['errors']}",flush=True)
     print(f"[REPORT] {out/'report.json'}",flush=True)
 
