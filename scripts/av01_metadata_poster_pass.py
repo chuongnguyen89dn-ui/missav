@@ -3,7 +3,7 @@
 # Reads every numeric AV01 id currently present in data/av01-catalog.json.
 # Independent checkpoint/resume. Does NOT resolve/probe video streams.
 
-import argparse, json, re, time
+import argparse, json, re, time, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
@@ -14,6 +14,8 @@ CATALOG=Path("data/av01-catalog.json")
 DEFAULT_OUT=Path("av01_metadata_pass")
 RETRY_SECONDS=180
 SAVE_EVERY=1
+BATCH_SIZE=20
+PUBLISH_PATH=Path("data/av01-metadata-catalog.json")
 
 def now():
     return datetime.now(timezone.utc).isoformat()
@@ -157,11 +159,46 @@ def poster_probe(url):
     except Exception as e:
         return {"ok":False,"status":0,"error":repr(e)}
 
+def git_run(*args, check=True):
+    return subprocess.run(["git",*args],check=check,text=True,capture_output=True)
+
+def publish_batch(results, cp, force=False):
+    """Publish every 20 newly completed metadata records, same cadence as link scanner.
+    Git failures are publication failures only; they never turn a META OK movie into pending.
+    """
+    published=int(cp.get("published_count",0) or 0)
+    ordered=sorted(results.values(),key=lambda x:int(x.get("id") or 0))
+    total=len(ordered)
+    target=total if force else (total//BATCH_SIZE)*BATCH_SIZE
+    if target<=published: return True
+    payload={
+      "version":1,"kind":"av01-metadata-poster","updated_at":now(),
+      "count":target,"movies":ordered[:target]
+    }
+    atomic_json(PUBLISH_PATH,payload)
+    try:
+        # Rebase immediately before publication so a long metadata run can coexist with link-scanner pushes.
+        git_run("pull","--rebase","origin","main")
+        git_run("add",str(PUBLISH_PATH).replace("\\","/"))
+        status=git_run("status","--porcelain",check=False).stdout
+        if str(PUBLISH_PATH).replace("\\","/") in status:
+            git_run("commit","-m",f"data(av01): publish metadata/poster through {target} movies")
+        git_run("push","origin","main")
+        cp["published_count"]=target
+        cp["last_publish_at"]=now()
+        print(f"[META PUBLISHED] {target}",flush=True)
+        return True
+    except Exception as e:
+        cp["publish_error"]=repr(e)
+        print(f"[META PUBLISH RETRY LATER] target={target} {e!r}",flush=True)
+        return False
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--out",default=str(DEFAULT_OUT))
     ap.add_argument("--headed",action="store_true")
     ap.add_argument("--retry-pending",action="store_true")
+    ap.add_argument("--test20",action="store_true",help="stop after first 20 META OK records are published")
     args=ap.parse_args()
     out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
     cp_path=out/"checkpoint.json"; result_path=out/"metadata.json"
@@ -206,6 +243,11 @@ def main():
             cp.update({"done":sorted(done,key=lambda x:int(x)),"pending":pending,"updated_at":now(),
                        "catalog_ids":len(catalog),"done_count":len(done),"pending_count":len(pending)})
             atomic_json(result_path,results); atomic_json(cp_path,cp)
+            publish_batch(results,cp)
+            atomic_json(cp_path,cp)
+            if args.test20 and int(cp.get("published_count",0) or 0)>=20:
+                print("[META TEST20 DONE] 20 records published to GitHub; stop for inspection.",flush=True)
+                break
         browser.close()
 
     # Merge enrichment into a separate catalog file. Never overwrite live catalog automatically.
