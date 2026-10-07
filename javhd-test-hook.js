@@ -25,7 +25,8 @@ const sessions = new Map();
 const sessionInflight = new Map();
 const masterCache = new Map();
 const SESSION_TTL = 90000;
-const MASTER_TTL = 60000;
+const MASTER_TTL = 300000;
+const masterInflight = new Map();
 
 function safeErr(e) {
   return String(e?.message || e || 'error')
@@ -165,27 +166,39 @@ async function avMaster(req, res, id) {
   }
 
   const started = Date.now();
-  const s = await getSession(id);
-  const sessionMs = Date.now() - started;
-  const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
-  let r = await fetch(signUrl(master, s), {
-    headers: upstreamHeaders(),
-    signal: AbortSignal.timeout(6000)
-  });
-  if ([502, 503, 504].includes(r.status)) {
-    const s2 = await getSession(id, true);
-    r = await fetch(signUrl(master, s2), {
-      headers: upstreamHeaders(),
-      signal: AbortSignal.timeout(6000)
+  let p = masterInflight.get(key);
+  if (!p) {
+    p = (async () => {
+      const s = await getSession(id);
+      const sessionMs = Date.now() - started;
+      const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
+      let r = await fetch(signUrl(master, s), {
+        headers: upstreamHeaders(),
+        signal: AbortSignal.timeout(6000)
+      });
+      if ([502, 503, 504].includes(r.status)) {
+        const s2 = await getSession(id, true);
+        r = await fetch(signUrl(master, s2), {
+          headers: upstreamHeaders(),
+          signal: AbortSignal.timeout(6000)
+        });
+      }
+      if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
+      const text = await r.text();
+      const rewritten = rewritePlaylist(text, r.url, id);
+      masterCache.set(key, { created: Date.now(), body: rewritten });
+      console.log('[AV01_NATIVE_MASTER]', JSON.stringify({
+        id, status: r.status, sessionMs, totalMs: Date.now() - started
+      }));
+      return rewritten;
+    })().finally(() => {
+      if (masterInflight.get(key) === p) masterInflight.delete(key);
     });
+    masterInflight.set(key, p);
+  } else {
+    console.log('[AV01_NATIVE_MASTER_JOIN]', JSON.stringify({ id }));
   }
-  if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
-  const text = await r.text();
-  const rewritten = rewritePlaylist(text, r.url, id);
-  masterCache.set(key, { created: Date.now(), body: rewritten });
-  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({
-    id, status: r.status, sessionMs, totalMs: Date.now() - started
-  }));
+  const rewritten = await p;
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
