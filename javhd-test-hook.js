@@ -270,6 +270,7 @@ async function avProxyTarget(req, res, id, target) {
   });
   nodeStream.pipe(res);
   return;
+}
 
 async function aj(url, opt = {}) {
   const r = await fetch(url, {
