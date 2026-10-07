@@ -311,4 +311,14 @@ def main():
 
 
 if __name__=="__main__":
-    main()
+    main()    if args.test20:
+        # Save locally only. Upload is a separate explicit command so scanner success
+        # is never turned into a scan failure by git/worktree state.
+        report_path=out/"test20-report.json"
+        report={"attempted":len(catalog),"ok":len(done),"pending":len(pending),
+                "done_ids":sorted(done,key=lambda x:int(x)),"failures":pending,
+                "results":results,"updated_at":now()}
+        atomic_json(report_path,report)
+        print(f"[META TEST20 DONE] attempted={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
+        print(f"[META TEST20 REPORT LOCAL] {report_path}",flush=True)
+        return
