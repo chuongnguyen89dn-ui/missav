@@ -22,7 +22,10 @@ const cors = {
 
 let catalogCache = { at: 0, items: [] };
 const sessions = new Map();
+const sessionInflight = new Map();
+const masterCache = new Map();
 const SESSION_TTL = 90000;
+const MASTER_TTL = 60000;
 
 function safeErr(e) {
   return String(e?.message || e || 'error')
@@ -67,7 +70,12 @@ async function getSession(id, force = false) {
   const key = String(id);
   const s = sessions.get(key);
   if (!force && s && Date.now() - s.created < SESSION_TTL) return s;
-  return resolveSession(id);
+  if (!force && sessionInflight.has(key)) return sessionInflight.get(key);
+  const p = resolveSession(id).finally(() => {
+    if (sessionInflight.get(key) === p) sessionInflight.delete(key);
+  });
+  if (!force) sessionInflight.set(key, p);
+  return p;
 }
 
 function rewritePlaylist(text, base, id) {
@@ -144,7 +152,21 @@ async function avDirectMaster(req, res, id) {
 }
 
 async function avMaster(req, res, id) {
+  const key = String(id);
+  const cached = masterCache.get(key);
+  if (cached && Date.now() - cached.created < MASTER_TTL) {
+    console.log('[AV01_NATIVE_MASTER_CACHE]', JSON.stringify({ id, age: Date.now() - cached.created }));
+    res.writeHead(200, {
+      ...cors,
+      'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
+      'cache-control': 'private, max-age=30'
+    });
+    return res.end(cached.body);
+  }
+
+  const started = Date.now();
   const s = await getSession(id);
+  const sessionMs = Date.now() - started;
   const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
   let r = await fetch(signUrl(master, s), {
     headers: upstreamHeaders(),
@@ -157,14 +179,17 @@ async function avMaster(req, res, id) {
       signal: AbortSignal.timeout(6000)
     });
   }
-  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({ id, status: r.status }));
   if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
   const text = await r.text();
   const rewritten = rewritePlaylist(text, r.url, id);
+  masterCache.set(key, { created: Date.now(), body: rewritten });
+  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({
+    id, status: r.status, sessionMs, totalMs: Date.now() - started
+  }));
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
-    'cache-control': 'no-store'
+    'cache-control': 'private, max-age=30'
   });
   return res.end(rewritten);
 }
