@@ -55,9 +55,9 @@ def movie_code(old, meta=None):
     for src in (old, meta or {}):
         for k in ("code","product_code","dvd_id","number"):
             v=str(src.get(k) or "").strip()
-            if v and v.upper()!="AV-01":
+            if v and v.upper() not in ("AV-01","LADA") and not v.upper().startswith("LADA-"):
                 return v.upper()
-    title=str((meta or {}).get("title") or old.get("title") or "")
+    title=str(old.get("title") or (meta or {}).get("title") or "")
     head=title.split("•",1)[0].split("-lada",1)[0].strip()
     pats=[
         r"^(FC2)[-_ ]?(PPV)[-_ ]?(\\d{4,10})(?:\\b|$)",
@@ -69,7 +69,7 @@ def movie_code(old, meta=None):
         if not m: continue
         if i==0: code=f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
         else: code=f"{m.group(1)}-{m.group(2)}"
-        if code.upper()!="AV-01": return code.upper()
+        if code.upper()!="AV-01" and code.upper()!="LADA" and not code.upper().startswith("LADA-"): return code.upper()
     return ""
 
 def dmm_poster(code):
@@ -151,6 +151,8 @@ def extract_page(pg, vid, old):
                 seen.add(name.casefold()); tags.append({"name":name,"id":"","href":""})
 
     title=mfirst("og:title","twitter:title","title") or str(video_ld.get("name") or "") or (d.get("headings") or [""])[0] or str(old.get("title") or "")
+    if (not title or "AV01.tv | High-quality free AV video streaming" in title):
+        title=str(old.get("title") or title)
     description=mfirst("og:description","description","twitter:description")
     poster_source=""
     vp=d.get("videoPosters") or []
@@ -300,7 +302,7 @@ def main():
             except Exception as e:
                 failures[vid]={"error":repr(e),"at":now()}
                 print(f"[META ERROR] {idx}/{len(catalog)} id={vid} {e!r}",flush=True)
-            atomic_json(out/"results.json",results)
+            atomic_json(out/"results.json",[results[v] for v,_ in catalog if v in results])
             atomic_json(out/"failures.json",failures)
         browser.close()
     report={"attempted":len(catalog),"records":len(results),"errors":len(failures),
@@ -310,7 +312,7 @@ def main():
     atomic_json(out/"report.json",report)
     if args.test20:
         atomic_json(ROOT/"data"/"av01-metadata-test20-report.json",report)
-        atomic_json(ROOT/"data"/"av01-metadata-test20-results.json",results)
+        atomic_json(ROOT/"data"/"av01-metadata-test20-results.json",[results[v] for v,_ in catalog if v in results])
         try:
             git_run("add","data/av01-metadata-test20-report.json","data/av01-metadata-test20-results.json")
             git_run("commit","-m","test(av01): save latest metadata test20 results",check=False)
