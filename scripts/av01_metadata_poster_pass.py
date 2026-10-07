@@ -228,7 +228,7 @@ def main():
     ap.add_argument("--out",default=str(DEFAULT_OUT))
     ap.add_argument("--headed",action="store_true")
     ap.add_argument("--retry-pending",action="store_true")
-    ap.add_argument("--test20",action="store_true",help="stop after first 20 META OK records are published")
+    ap.add_argument("--test20",action="store_true",help="clean isolated scan of exactly the first 20 catalog movies, then stop")
     ap.add_argument("--republish",action="store_true",help="force republish existing metadata results in original addon order")
     args=ap.parse_args()
     out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
