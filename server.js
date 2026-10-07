@@ -8,7 +8,7 @@ try{av01Catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',impor
 let av01Movies=Array.isArray(av01Catalog)?av01Catalog:(av01Catalog.movies||[]);
 let av01Test20={movies:[]};try{av01Test20=JSON.parse(readFileSync(new URL('./data/av01-addon-test20.json',import.meta.url),'utf8'));}catch{}
 const av01Enriched=new Map((av01Test20.movies||[]).map(x=>[String(x.id),x]));
-av01Movies=av01Movies.map(x=>{const e=av01Enriched.get(String(x.id));return e?{...x,...e,id:x.id}:x;});
+av01Movies=av01Movies.map(x=>{const e=av01Enriched.get(String(x.id));if(!e)return x;const poster=e.poster||x.poster||x.cover||undefined;return {...x,...e,id:x.id,poster};});
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
 function av01Meta(x){
  const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
@@ -61,7 +61,7 @@ function filmMeta(f){
  };
  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==undefined&&v!==''));
 }
-const publicManifest={id:'community.missav.hls.test',version:'0.6.7-single-production',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test20',name:'Test AV01 · Metadata + Poster'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
+const publicManifest={id:'community.missav.hls.test',version:'0.6.8-poster15',name:'MissAV 1080p',description:'MissAV + ikisoda + AV01 verified catalogs',resources:['catalog','meta','stream'],types:['movie'],catalogs:[{type:'movie',id:'missav-1080',name:'MissAV · Verified 1080p'},{type:'movie',id:'ikisoda',name:'ikisoda'},{type:'movie',id:'av01-test20',name:'Test AV01 · Metadata + Poster'},{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],idPrefixes:['missav:','ikisoda:','av01:']};
 function normalizeIkisodaMovie(x){
  const code=String(x?.code||x?.id||'').replace(/^ikisoda:/i,'').trim();
  if(!code)return null;
