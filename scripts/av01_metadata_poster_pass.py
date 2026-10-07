@@ -228,72 +228,70 @@ def main():
     ap.add_argument("--out",default=str(DEFAULT_OUT))
     ap.add_argument("--headed",action="store_true")
     ap.add_argument("--retry-pending",action="store_true")
-    ap.add_argument("--test20",action="store_true",help="clean isolated scan of exactly the first 20 catalog movies, then stop")
-    ap.add_argument("--republish",action="store_true",help="force republish existing metadata results in original addon order")
+    ap.add_argument("--test20",action="store_true")
     args=ap.parse_args()
-    out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
+
+    catalog=load_catalog()
+    if args.test20:
+        catalog=catalog[:20]
+        out=Path(args.out)/"test20"
+        # Always clean: test20 must never inherit the full-pass checkpoint.
+        if out.exists():
+            import shutil
+            shutil.rmtree(out)
+        out.mkdir(parents=True,exist_ok=True)
+        print("[META TEST20] clean scan: exactly first 20 movies",flush=True)
+    else:
+        out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
+
     cp_path=out/"checkpoint.json"; result_path=out/"metadata.json"
     cp={"done":[],"pending":{},"started_at":now(),"source_catalog":str(CATALOG)}
-    if cp_path.exists():
-        try: cp.update(json.loads(cp_path.read_text(encoding="utf-8")))
-        except Exception: pass
-    results={}
-    if result_path.exists():
-        try: results=json.loads(result_path.read_text(encoding="utf-8"))
-        except Exception: results={}
-    done=set(map(str,cp.get("done") or []))
-    pending=cp.get("pending") or {}
+    results={}; done=set(); pending={}
+
+    if not args.test20:
+        if cp_path.exists():
+            try: cp.update(json.loads(cp_path.read_text(encoding="utf-8")))
+            except Exception: pass
+        if result_path.exists():
+            try: results=json.loads(result_path.read_text(encoding="utf-8"))
+            except Exception: results={}
+        done=set(map(str,cp.get("done") or [])); pending=cp.get("pending") or {}
 
     from playwright.sync_api import sync_playwright
-    catalog=load_catalog()
-    print(f"[META] GitHub/local catalog IDs={len(catalog)} done={len(done)} pending={len(pending)}",flush=True)
-
+    print(f"[META] catalog IDs={len(catalog)} done={len(done)} pending={len(pending)}",flush=True)
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=not args.headed)
         ctx=browser.new_context(locale="en-US",user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36")
         pg=ctx.new_page()
         for idx,(vid,old) in enumerate(catalog,1):
-            if vid in done: continue
-            if vid in pending and not args.retry_pending:
-                last=float(pending[vid].get("ts_epoch",0) or 0)
-                if time.time()-last<RETRY_SECONDS: continue
             try:
                 meta=extract_page(pg,vid,old)
                 probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
                 meta["poster_probe"]=probe
                 meta["poster_auth"]=poster_auth_info(meta.get("poster") or "")
                 if not meta.get("title") or not meta.get("official_tags"):
-                    print(f"[META DEBUG] id={vid} url={meta.get('url')} title={meta.get('title')!r} tags={len(meta.get('official_tags') or [])} poster_source={meta.get('poster_source')!r} poster={meta.get('poster')!r}",flush=True)
                     raise RuntimeError("metadata incomplete: missing title/tags")
-                if not probe.get("ok"):
-                    raise RuntimeError(f"poster failed: {probe}")
-                results[vid]=meta
-                done.add(vid); pending.pop(vid,None)
+                if not probe.get("ok"): raise RuntimeError(f"poster failed: {probe}")
+                results[vid]=meta; done.add(vid); pending.pop(vid,None)
                 print(f"[META OK] {idx}/{len(catalog)} id={vid} tags={len(meta['official_tags'])} poster={probe.get('status')}",flush=True)
             except Exception as e:
                 pending[vid]={"error":repr(e),"ts":now(),"ts_epoch":time.time()}
                 print(f"[META PENDING] {idx}/{len(catalog)} id={vid} {e!r}",flush=True)
-            cp.update({"done":sorted(done,key=lambda x:int(x)),"pending":pending,"updated_at":now(),
-                       "catalog_ids":len(catalog),"done_count":len(done),"pending_count":len(pending)})
+            cp.update({"done":sorted(done,key=lambda x:int(x)),"pending":pending,"updated_at":now(),"catalog_ids":len(catalog),"done_count":len(done),"pending_count":len(pending)})
             atomic_json(result_path,results); atomic_json(cp_path,cp)
-            publish_batch(results,cp)
-            atomic_json(cp_path,cp)
-            if args.test20 and int(cp.get("published_count",0) or 0)>=20:
-                print("[META TEST20 DONE] 20 records published to GitHub; stop for inspection.",flush=True)
-                break
         browser.close()
 
-    # Merge enrichment into a separate catalog file. Never overwrite live catalog automatically.
+    if args.test20:
+        # Test only: do not publish and do not touch full-pass checkpoint.
+        print(f"[META TEST20 DONE] attempted=20 ok={len(done)} pending={len(pending)}",flush=True)
+        return
+
     enriched=[]
     for vid,old in catalog:
         x=dict(old)
         if vid in results:
-            x.update(results[vid])
-            x["metadata_ok"]=True
-            x["poster_ok"]=bool(results[vid].get("poster_probe",{}).get("ok"))
+            x.update(results[vid]); x["metadata_ok"]=True; x["poster_ok"]=bool(results[vid].get("poster_probe",{}).get("ok"))
         enriched.append(x)
     atomic_json(out/"av01-catalog-enriched.json",enriched)
     print(f"[META DONE PASS] source={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
 
-if __name__=="__main__":
-    main()
