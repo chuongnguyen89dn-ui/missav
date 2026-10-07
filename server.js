@@ -366,7 +366,7 @@ if(path.startsWith('/play/'))return filmProxy(req,res,path);
 if(path==='/manifest.json')return json(res,publicManifest);
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json'){const xs=await ikisodaMovies();return json(res,{metas:xs.map(ikisodaMetaFor)});}
-if(path==='/catalog/movie/av01-test20.json'||path==='/catalog/movie/av01-filtered.json')return json(res,{metas:av01Movies.map(av01Meta)});
+if(path==='/catalog/movie/av01-filtered.json')return json(res,{metas:av01Movies.map(av01Meta)});
 if(path.startsWith('/meta/movie/av01:')&&path.endsWith('.json')){const x=av01ById.get(path.slice('/meta/movie/'.length,-5));return x?json(res,{meta:av01Meta(x)}):json(res,{error:'Not found'},404);}
 if(path.startsWith('/stream/movie/av01:')&&path.endsWith('.json')){const x=av01ById.get(path.slice('/stream/movie/'.length,-5));return x?json(res,{streams:[{name:'AV01 1080p · dynamic resolver required',title:'Fresh token is resolved at Play time',externalUrl:x.page_url||('https://www.av01.media/vn/video/'+x.id)}]}):json(res,{streams:[]});}
 if(path.startsWith('/meta/movie/ikisoda:')&&path.endsWith('.json')){const key=path.slice('/meta/movie/'.length,-5);const x=(await ikisodaMovies()).find(v=>v.id===key);return x?json(res,{meta:ikisodaMetaFor(x)}):json(res,{error:'Not found'},404);}
