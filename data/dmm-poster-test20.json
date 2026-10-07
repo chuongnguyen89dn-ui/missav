@@ -2,8 +2,8 @@
   "source": "DMM pics",
   "rule": "lowercase movie code, remove separators => {slug}/{slug}pl.jpg",
   "attempted": 20,
-  "ok": 20,
-  "failed": 0,
+  "ok": 15,
+  "failed": 5,
   "movies": [
     {
       "order": 1,
@@ -16,6 +16,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/yuj074/yuj074pl.jpg"
       }
     },
@@ -30,6 +31,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 127077,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/npjs284/npjs284pl.jpg"
       }
     },
@@ -44,6 +46,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/npjs278/npjs278pl.jpg"
       }
     },
@@ -58,6 +61,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/cawb040/cawb040pl.jpg"
       }
     },
@@ -72,6 +76,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/adn793/adn793pl.jpg"
       }
     },
@@ -82,10 +87,11 @@
       "code": "SIRO-5739",
       "poster": "https://pics.dmm.co.jp/mono/movie/adult/siro5739/siro5739pl.jpg",
       "probe": {
-        "ok": true,
+        "ok": false,
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 2732,
+        "placeholder": true,
         "final_url": "https://pics.dmm.com/mono/noimage/now_printing.jpg"
       }
     },
@@ -100,6 +106,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/npjb131/npjb131pl.jpg"
       }
     },
@@ -114,6 +121,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/jbd313/jbd313pl.jpg"
       }
     },
@@ -128,6 +136,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/npjs281/npjs281pl.jpg"
       }
     },
@@ -138,10 +147,11 @@
       "code": "AV-01",
       "poster": "https://pics.dmm.co.jp/mono/movie/adult/av01/av01pl.jpg",
       "probe": {
-        "ok": true,
+        "ok": false,
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 2732,
+        "placeholder": true,
         "final_url": "https://pics.dmm.com/mono/noimage/now_printing.jpg"
       }
     },
@@ -152,10 +162,11 @@
       "code": "AV-01",
       "poster": "https://pics.dmm.co.jp/mono/movie/adult/av01/av01pl.jpg",
       "probe": {
-        "ok": true,
+        "ok": false,
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 2732,
+        "placeholder": true,
         "final_url": "https://pics.dmm.com/mono/noimage/now_printing.jpg"
       }
     },
@@ -166,10 +177,11 @@
       "code": "AV-01",
       "poster": "https://pics.dmm.co.jp/mono/movie/adult/av01/av01pl.jpg",
       "probe": {
-        "ok": true,
+        "ok": false,
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 2732,
+        "placeholder": true,
         "final_url": "https://pics.dmm.com/mono/noimage/now_printing.jpg"
       }
     },
@@ -184,6 +196,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/adn811/adn811pl.jpg"
       }
     },
@@ -198,6 +211,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 118449,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/mida812/mida812pl.jpg"
       }
     },
@@ -212,6 +226,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/adn805/adn805pl.jpg"
       }
     },
@@ -226,6 +241,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/waaa691/waaa691pl.jpg"
       }
     },
@@ -240,6 +256,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/atid700/atid700pl.jpg"
       }
     },
@@ -254,6 +271,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/mird287/mird287pl.jpg"
       }
     },
@@ -268,6 +286,7 @@
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 131072,
+        "placeholder": false,
         "final_url": "https://pics.dmm.co.jp/mono/movie/adult/ipzz945/ipzz945pl.jpg"
       }
     },
@@ -278,10 +297,11 @@
       "code": "AV-01",
       "poster": "https://pics.dmm.co.jp/mono/movie/adult/av01/av01pl.jpg",
       "probe": {
-        "ok": true,
+        "ok": false,
         "status": 200,
         "content_type": "image/jpeg",
         "bytes_checked": 2732,
+        "placeholder": true,
         "final_url": "https://pics.dmm.com/mono/noimage/now_printing.jpg"
       }
     }
