@@ -17,7 +17,7 @@ function av01Meta(x){
  const links=[...cast.map(name=>({name,category:'actor',url:'stremio:///search?search='+encodeURIComponent(name)})),...genres.map(name=>({name,category:'genre',url:'stremio:///search?search='+encodeURIComponent(name)}))];
  const m={id:'av01:'+x.id,type:'movie',name:x.title||x.dvd_id||('AV01 '+x.id),poster:x.poster||x.cover||undefined,posterShape:'poster',description:x.description||undefined,releaseInfo:date?String(date).slice(0,4):(x.year?String(x.year):undefined),released:date?new Date(date).toISOString():undefined,genres,genre:genres,cast:cast.length?cast:undefined,director:x.maker?.name?[x.maker.name]:undefined,links,language:'Tiếng Nhật'};
  return Object.fromEntries(Object.entries(m).filter(([,v])=>v!==undefined&&v!==''));
-}}
+}
 const IKISODA_CATALOG_URL='https://raw.githubusercontent.com/chuongnguyen89dn-ui/missav/ikisoda-data/data/ikisoda-catalog.json';
 let ikisodaCache={data:JSON.parse(readFileSync(new URL('./data/ikisoda-catalog.json',import.meta.url),'utf8')),at:0};
 async function getIkisodaCatalog(){
