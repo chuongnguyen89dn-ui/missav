@@ -282,8 +282,21 @@ def main():
         browser.close()
 
     if args.test20:
-        # Test only: do not publish and do not touch full-pass checkpoint.
-        print(f"[META TEST20 DONE] attempted=20 ok={len(done)} pending={len(pending)}",flush=True)
+        report_path=ROOT/"data"/"av01-metadata-test20-report.json"
+        report={"attempted":len(catalog),"ok":len(done),"pending":len(pending),
+                "done_ids":sorted(done,key=lambda x:int(x)),"failures":pending,
+                "results":results,"updated_at":now()}
+        atomic_json(report_path,report)
+        print(f"[META TEST20 DONE] attempted={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
+        try:
+            git_run("add","data/av01-metadata-test20-report.json")
+            st=git_run("status","--porcelain",check=False).stdout
+            if "data/av01-metadata-test20-report.json" in st:
+                git_run("commit","-m",f"test(av01): save test20 report ok={len(done)} pending={len(pending)}")
+            git_run("push","origin","HEAD:av01-metadata-poster-pass")
+            print("[META TEST20 REPORT PUSHED]",flush=True)
+        except Exception as e:
+            print(f"[META TEST20 REPORT PUSH FAILED] {e!r}",flush=True)
         return
 
     enriched=[]
