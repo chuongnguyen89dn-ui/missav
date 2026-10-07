@@ -22,11 +22,7 @@ const cors = {
 
 let catalogCache = { at: 0, items: [] };
 const sessions = new Map();
-const sessionInflight = new Map();
-const masterCache = new Map();
 const SESSION_TTL = 90000;
-const MASTER_TTL = 300000;
-const masterInflight = new Map();
 
 function safeErr(e) {
   return String(e?.message || e || 'error')
@@ -71,12 +67,7 @@ async function getSession(id, force = false) {
   const key = String(id);
   const s = sessions.get(key);
   if (!force && s && Date.now() - s.created < SESSION_TTL) return s;
-  if (!force && sessionInflight.has(key)) return sessionInflight.get(key);
-  const p = resolveSession(id).finally(() => {
-    if (sessionInflight.get(key) === p) sessionInflight.delete(key);
-  });
-  if (!force) sessionInflight.set(key, p);
-  return p;
+  return resolveSession(id);
 }
 
 function rewritePlaylist(text, base, id) {
@@ -104,7 +95,7 @@ function upstreamHeaders() {
   };
 }
 
-async function fetchUpstream(id, target, force = false, reqHeaders = {}, timeoutMs = 25000) {
+async function fetchUpstream(id, target, force = false, reqHeaders = {}) {
   const s = await getSession(id, force);
   const headers = { ...upstreamHeaders() };
   if (reqHeaders.range) headers.Range = reqHeaders.range;
@@ -112,7 +103,7 @@ async function fetchUpstream(id, target, force = false, reqHeaders = {}, timeout
   return fetch(signUrl(target, s), {
     headers,
     redirect: 'follow',
-    signal: AbortSignal.timeout(timeoutMs)
+    signal: AbortSignal.timeout(25000)
   });
 }
 
@@ -153,56 +144,27 @@ async function avDirectMaster(req, res, id) {
 }
 
 async function avMaster(req, res, id) {
-  const key = String(id);
-  const cached = masterCache.get(key);
-  if (cached && Date.now() - cached.created < MASTER_TTL) {
-    console.log('[AV01_NATIVE_MASTER_CACHE]', JSON.stringify({ id, age: Date.now() - cached.created }));
-    res.writeHead(200, {
-      ...cors,
-      'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
-      'cache-control': 'private, max-age=30'
+  const s = await getSession(id);
+  const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
+  let r = await fetch(signUrl(master, s), {
+    headers: upstreamHeaders(),
+    signal: AbortSignal.timeout(6000)
+  });
+  if ([502, 503, 504].includes(r.status)) {
+    const s2 = await getSession(id, true);
+    r = await fetch(signUrl(master, s2), {
+      headers: upstreamHeaders(),
+      signal: AbortSignal.timeout(6000)
     });
-    return res.end(cached.body);
   }
-
-  const started = Date.now();
-  let p = masterInflight.get(key);
-  if (!p) {
-    p = (async () => {
-      const s = await getSession(id);
-      const sessionMs = Date.now() - started;
-      const master = `https://customers.iw01.xyz/api/v1/videos/${id}/manifest/index90-sv3-v1-a1.m3u8`;
-      let r = await fetch(signUrl(master, s), {
-        headers: upstreamHeaders(),
-        signal: AbortSignal.timeout(6000)
-      });
-      if ([502, 503, 504].includes(r.status)) {
-        const s2 = await getSession(id, true);
-        r = await fetch(signUrl(master, s2), {
-          headers: upstreamHeaders(),
-          signal: AbortSignal.timeout(6000)
-        });
-      }
-      if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
-      const text = await r.text();
-      const rewritten = rewritePlaylist(text, r.url, id);
-      masterCache.set(key, { created: Date.now(), body: rewritten });
-      console.log('[AV01_NATIVE_MASTER]', JSON.stringify({
-        id, status: r.status, sessionMs, totalMs: Date.now() - started
-      }));
-      return rewritten;
-    })().finally(() => {
-      if (masterInflight.get(key) === p) masterInflight.delete(key);
-    });
-    masterInflight.set(key, p);
-  } else {
-    console.log('[AV01_NATIVE_MASTER_JOIN]', JSON.stringify({ id }));
-  }
-  const rewritten = await p;
+  console.log('[AV01_NATIVE_MASTER]', JSON.stringify({ id, status: r.status }));
+  if (!r.ok) throw new Error(`AV01 manifest ${r.status}`);
+  const text = await r.text();
+  const rewritten = rewritePlaylist(text, r.url, id);
   res.writeHead(200, {
     ...cors,
     'content-type': 'application/vnd.apple.mpegurl; charset=utf-8',
-    'cache-control': 'private, max-age=30'
+    'cache-control': 'no-store'
   });
   return res.end(rewritten);
 }
@@ -220,23 +182,16 @@ async function avProxyTarget(req, res, id, target) {
   let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      // Fail over quickly when a CDN edge is slow to return headers. The final
-      // attempt keeps the long timeout so weak/slow sources still have a chance.
-      const attemptStarted = Date.now();
-      const headerTimeout = attempt === 1 ? 900 : attempt === 2 ? 1800 : 25000;
-      r = await fetchUpstream(id, u.toString(), attempt > 1, reqHeaders, headerTimeout);
+      r = await fetchUpstream(id, u.toString(), attempt > 1, reqHeaders);
       console.log('[AV01_NATIVE_FETCH_ATTEMPT]', JSON.stringify({
-        id, path: u.pathname, attempt, status: r.status,
-        attemptMs: Date.now() - attemptStarted, ms: Date.now() - started
+        id, path: u.pathname, attempt, status: r.status, ms: Date.now() - started
       }));
       if (![502, 503, 504].includes(r.status) || attempt === 3) break;
       try { await r.body?.cancel(); } catch {}
     } catch (e) {
       lastError = e;
       console.error('[AV01_NATIVE_FETCH_RETRY]', JSON.stringify({
-        id, path: u.pathname, attempt, ms: Date.now() - started,
-        reason: attempt < 3 ? 'slow-or-failed-edge' : 'final-failure',
-        error: safeErr(e)
+        id, path: u.pathname, attempt, ms: Date.now() - started, error: safeErr(e)
       }));
       if (attempt < 3) continue;
     }
@@ -280,41 +235,15 @@ async function avProxyTarget(req, res, id, target) {
   if (etag) headers.etag = etag;
   if (lastModified) headers['last-modified'] = lastModified;
 
-  // Stream immediately after headers so seek/playback can start without waiting
-  // for the entire fMP4 segment. Keep the upstream abort timeout; if the source
-  // stalls before any bytes arrive, retry the request rather than buffering it.
-  let nodeStream;
-  try {
-    nodeStream = Readable.fromWeb(r.body);
-  } catch (e) {
-    console.error('[AV01_NATIVE_STREAM_SETUP_ERROR]', JSON.stringify({
-      id, path: u.pathname, error: safeErr(e)
-    }));
-    res.writeHead(502, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
-    return res.end('AV01 stream setup failed\\n');
-  }
+  res.writeHead(r.status, headers);
+  if (req.method === 'HEAD' || !r.body) return res.end();
 
-  let bytes = 0;
-  let settled = false;
-  nodeStream.on('data', chunk => {
-    bytes += chunk.length;
-  });
+  const nodeStream = Readable.fromWeb(r.body);
   nodeStream.on('error', err => {
-    console.error('[AV01_NATIVE_STREAM_ERROR]', JSON.stringify({
-      id, path: u.pathname, bytes, error: safeErr(err)
-    }));
+    console.error('[AV01_NATIVE_STREAM_ERROR]', JSON.stringify({ id, path: u.pathname, error: safeErr(err) }));
     if (!res.destroyed) res.destroy(err);
   });
-  nodeStream.on('end', () => {
-    settled = true;
-  });
-  res.on('close', () => {
-    if (!settled) {
-      try { nodeStream.destroy(); } catch {}
-    }
-  });
   nodeStream.pipe(res);
-  return;
 }
 
 async function aj(url, opt = {}) {
