@@ -52,7 +52,7 @@ def extract_page(pg, vid, old):
     pg.goto(u,wait_until="domcontentloaded",timeout=45000)
     try: pg.wait_for_load_state("networkidle",timeout=8000)
     except Exception: pass
-    pg.wait_for_timeout(500)
+    pg.wait_for_timeout(1500)
 
     d=pg.evaluate("""() => {
       const T=e=>(e?.textContent||'').trim();
@@ -71,10 +71,10 @@ def extract_page(pg, vid, old):
       const headings=[...document.querySelectorAll('h1,h2,h3')].map(T).filter(Boolean);
       const times=[...document.querySelectorAll('time,[datetime]')].map(e=>({text:T(e),datetime:e.getAttribute('datetime')||''}));
       const images=[...document.images].map(i=>({src:i.currentSrc||i.src||'',alt:i.alt||'',width:i.naturalWidth||0,height:i.naturalHeight||0}));
-      const canonical=document.querySelector('link[rel="canonical"]')?.href||location.href;
+      const videoPosters=[...document.querySelectorAll("video")].map(v=>v.poster||v.getAttribute("poster")||"").filter(Boolean);\n      const canonical=document.querySelector('link[rel="canonical"]')?.href||location.href;
       const lang=document.documentElement.lang||'';
       const bodyText=T(document.body);
-      return {metas,jsonld,tags,crumbs,headings,times,images,canonical,lang,bodyText};
+      return {metas,jsonld,tags,crumbs,headings,times,images,videoPosters,canonical,lang,bodyText};
     }""")
 
     metas=d.get("metas") or {}
@@ -118,7 +118,7 @@ def extract_page(pg, vid, old):
     if not poster:
         imgs=d.get("images") or []
         candidates=[x.get("src") for x in imgs if x.get("src") and int(x.get("width") or 0)>=240 and int(x.get("height") or 0)>=120]
-        poster=candidates[0] if candidates else ""
+        poster=candidates[0] if candidates else ""\n        if poster: poster_source="rendered.img"
 
     # Keep both normalized useful fields and raw page metadata so no available metadata is discarded.
     result={
@@ -127,7 +127,7 @@ def extract_page(pg, vid, old):
       "title":title,
       "description":description,
       "poster":poster,
-      "poster_stable":poster,
+      "poster_stable":poster,\n      "poster_source":poster_source,
       "official_tags":[x["name"] for x in tags],
       "official_tag_refs":tags,
       "upload_date":str(video_ld.get("uploadDate") or video_ld.get("datePublished") or ""),
