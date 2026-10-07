@@ -54,7 +54,7 @@ def extract_page(pg, vid, old):
     except Exception: pass
     pg.wait_for_timeout(1500)
 
-    d=pg.evaluate("""() => {
+    d=pg.evaluate(r"""() => {
       const T=e=>(e?.textContent||'').trim();
       const A=e=>e?.getAttribute?.bind(e);
       const metas={};
@@ -66,7 +66,7 @@ def extract_page(pg, vid, old):
       const jsonld=[...document.querySelectorAll('script[type="application/ld+json"]')]
         .map(x=>x.textContent).filter(Boolean);
       const links=[...document.querySelectorAll('a[href]')].map(a=>({text:T(a),href:a.href}));
-      const tags=links.filter(x=>/\/(?:en|vn|ja|zh(?:-cn|-tw)?)\/tag\/\d+(?:\/|$)/i.test(new URL(x.href,location.href).pathname));
+      const tags=links.filter(x=>{ const p=new URL(x.href,location.href).pathname; return /\/tag\//i.test(p) || /\/tags?\//i.test(p); });
       const crumbs=[...document.querySelectorAll('[class*="breadcrumb"] a, nav[aria-label*="breadcrumb" i] a')].map(a=>({text:T(a),href:a.href}));
       const headings=[...document.querySelectorAll('h1,h2,h3')].map(T).filter(Boolean);
       const times=[...document.querySelectorAll('time,[datetime]')].map(e=>({text:T(e),datetime:e.getAttribute('datetime')||''}));
@@ -112,8 +112,15 @@ def extract_page(pg, vid, old):
         seen.add(name.casefold())
         tm=re.search(r"/tag/(\d+)",href)
         tags.append({"name":name,"id":tm.group(1) if tm else "","href":href})
+    if not tags:
+        old_tags=old.get("official_tags") or old.get("tags") or []
+        if isinstance(old_tags,str): old_tags=[x.strip() for x in old_tags.split(",") if x.strip()]
+        for x in old_tags:
+            name=norm(x.get("name") if isinstance(x,dict) else str(x))
+            if name and name.casefold() not in seen:
+                seen.add(name.casefold()); tags.append({"name":name,"id":"","href":""})
 
-    title=mfirst("og:title","twitter:title") or (d.get("headings") or [""])[0]
+    title=mfirst("og:title","twitter:title","title") or str(video_ld.get("name") or "") or (d.get("headings") or [""])[0] or str(old.get("title") or "")
     description=mfirst("og:description","description","twitter:description")
     poster_source=""
     vp=d.get("videoPosters") or []
@@ -242,6 +249,7 @@ def main():
                 probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
                 meta["poster_probe"]=probe
                 if not meta.get("title") or not meta.get("official_tags"):
+                    print(f"[META DEBUG] id={vid} url={meta.get('url')} title={meta.get('title')!r} tags={len(meta.get('official_tags') or [])} poster_source={meta.get('poster_source')!r} poster={meta.get('poster')!r}",flush=True)
                     raise RuntimeError("metadata incomplete: missing title/tags")
                 if not probe.get("ok"):
                     raise RuntimeError(f"poster failed: {probe}")
