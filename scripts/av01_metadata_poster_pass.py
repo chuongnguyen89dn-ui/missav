@@ -4,6 +4,7 @@
 # Independent checkpoint/resume. Does NOT resolve/probe video streams.
 
 import argparse, json, re, time, subprocess
+from urllib.parse import urlparse, parse_qs
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
@@ -163,6 +164,15 @@ def extract_page(pg, vid, old):
     }
     return result
 
+def poster_auth_info(url):
+    """Describe AV01 cover signing without assuming it equals HLS access_token."""
+    try:
+        q=parse_qs(urlparse(url or "").query)
+        exp=int((q.get("expires") or ["0"])[0] or 0)
+        return {"signed":bool(q.get("token_v2")),"expires":exp,"expires_at":datetime.fromtimestamp(exp,timezone.utc).isoformat() if exp else "","ip":(q.get("ip") or [""])[0]}
+    except Exception as e:
+        return {"signed":False,"error":repr(e)}
+
 def poster_probe(url):
     if not url: return {"ok":False,"status":0,"content_type":"","bytes":0}
     try:
@@ -185,7 +195,9 @@ def publish_batch(results, cp, force=False):
     Git failures are publication failures only; they never turn a META OK movie into pending.
     """
     published=int(cp.get("published_count",0) or 0)
-    ordered=sorted(results.values(),key=lambda x:int(x.get("id") or 0))
+    # Preserve the original addon/catalog order; never sort by numeric AV01 id.
+    source_order=[vid for vid,_ in load_catalog()]
+    ordered=[results[vid] for vid in source_order if vid in results]
     total=len(ordered)
     target=total if force else (total//BATCH_SIZE)*BATCH_SIZE
     if target<=published: return True
@@ -248,6 +260,7 @@ def main():
                 meta=extract_page(pg,vid,old)
                 probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
                 meta["poster_probe"]=probe
+                meta["poster_auth"]=poster_auth_info(meta.get("poster") or "")
                 if not meta.get("title") or not meta.get("official_tags"):
                     print(f"[META DEBUG] id={vid} url={meta.get('url')} title={meta.get('title')!r} tags={len(meta.get('official_tags') or [])} poster_source={meta.get('poster_source')!r} poster={meta.get('poster')!r}",flush=True)
                     raise RuntimeError("metadata incomplete: missing title/tags")
