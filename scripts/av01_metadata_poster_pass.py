@@ -11,6 +11,8 @@ from urllib.parse import urljoin
 import requests
 
 BASE="https://www.av01.media"
+ROOT=Path(".")
+DMM="https://pics.dmm.co.jp/mono/movie/adult"
 CATALOG=Path("data/av01-catalog.json")
 DEFAULT_OUT=Path("av01_metadata_pass")
 RETRY_SECONDS=180
@@ -46,6 +48,33 @@ def load_catalog():
         if vid and vid not in seen:
             seen.add(vid); out.append((vid,m))
     return out
+
+
+def movie_code(old, meta=None):
+    """Extract product code from AV01 data/title. Never treat AV01.tv as a code."""
+    for src in (old, meta or {}):
+        for k in ("code","product_code","dvd_id","number"):
+            v=str(src.get(k) or "").strip()
+            if v and v.upper()!="AV-01":
+                return v.upper()
+    title=str((meta or {}).get("title") or old.get("title") or "")
+    head=title.split("•",1)[0].split("-lada",1)[0].strip()
+    pats=[
+        r"^(FC2)[-_ ]?(PPV)[-_ ]?(\\d{4,10})(?:\\b|$)",
+        r"^([0-9]{2,4}[A-Za-z]{2,12})[-_ ]?(\\d{2,7})(?:\\b|$)",
+        r"^([A-Za-z]{2,12})[-_ ]?(\\d{2,7})(?:\\b|$)",
+    ]
+    for i,pat in enumerate(pats):
+        m=re.search(pat,head,re.I)
+        if not m: continue
+        if i==0: code=f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        else: code=f"{m.group(1)}-{m.group(2)}"
+        if code.upper()!="AV-01": return code.upper()
+    return ""
+
+def dmm_poster(code):
+    slug=re.sub(r"[^a-z0-9]","",(code or "").lower())
+    return f"{DMM}/{slug}/{slug}pl.jpg" if slug else ""
 
 def extract_page(pg, vid, old):
     # Open by known catalog URL first; numeric-ID fallback is stable enough for redirect/canonical discovery.
@@ -182,8 +211,11 @@ def poster_probe(url):
             n+=len(chunk)
             if n>=131072: break
         ct=r.headers.get("content-type","")
-        return {"ok":r.status_code==200 and ct.startswith("image/") and n>0,
-                "status":r.status_code,"content_type":ct,"bytes_checked":n}
+        final=r.url
+        placeholder=("noimage" in final.lower() or "now_printing" in final.lower())
+        return {"ok":r.status_code==200 and ct.startswith("image/") and n>0 and not placeholder,
+                "status":r.status_code,"content_type":ct,"bytes_checked":n,
+                "placeholder":placeholder,"final_url":final}
     except Exception as e:
         return {"ok":False,"status":0,"error":repr(e)}
 
@@ -242,13 +274,25 @@ def main():
         for idx,(vid,oldm) in enumerate(catalog,1):
             try:
                 meta=extract_page(pg,vid,oldm)
-                probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
+                # Metadata always comes from AV01. Poster comes only from DMM.
+                code=movie_code(oldm,meta)
+                dmm=dmm_poster(code)
+                probe=poster_probe(dmm) if dmm else {"ok":False,"status":0,"error":"movie_code_not_found"}
+                final=str(probe.get("final_url") or "")
+                placeholder=("noimage" in final.lower() or "now_printing" in final.lower())
+                if placeholder: probe["ok"]=False
+                probe["placeholder"]=placeholder
+                meta["movie_code"]=code
+                meta["poster"]=dmm if probe.get("ok") else None
+                meta["poster_stable"]=meta["poster"]
+                meta["poster_source"]="dmm" if probe.get("ok") else ""
                 meta["poster_probe"]=probe
-                meta["poster_auth"]=poster_auth_info(meta.get("poster") or "")
+                meta["poster_dmm_missing"]=not bool(probe.get("ok"))
+                meta.pop("poster_auth",None)
                 missing=[]
                 if not meta.get("title"): missing.append("title")
                 if not meta.get("official_tags"): missing.append("tags")
-                if not probe.get("ok"): missing.append("poster")
+                # Missing DMM poster is allowed and never makes AV01 metadata incomplete.
                 meta["missing_fields"]=missing
                 meta["metadata_complete"]=not missing
                 results[vid]=meta
