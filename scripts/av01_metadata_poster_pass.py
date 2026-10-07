@@ -51,25 +51,28 @@ def load_catalog():
 
 
 def movie_code(old, meta=None):
-    """Extract product code from AV01 data/title. Never treat AV01.tv as a code."""
+    """Extract the real product code from the beginning of the AV01 catalog title."""
+    title=str(old.get("title") or (meta or {}).get("title") or "").strip()
+    head=title.split("•",1)[0].strip()
+    # Strip AV01's optional -lada suffix without treating LADA as a product code.
+    head=re.sub(r"-lada$","",head,flags=re.I).strip()
+    patterns=[
+        r"^(FC2)[-_ ]?(PPV)[-_ ]?(\\d{4,10})$",
+        r"^([0-9]{2,4}[A-Za-z]{2,12})[-_ ]?(\\d{2,7})$",
+        r"^([A-Za-z]{2,12})[-_ ]?(\\d{2,7})$",
+    ]
+    for i,pat in enumerate(patterns):
+        m=re.match(pat,head,re.I)
+        if not m: continue
+        if i==0:
+            return f"{m.group(1)}-{m.group(2)}-{m.group(3)}".upper()
+        return f"{m.group(1)}-{m.group(2)}".upper()
+    # Explicit fields are only a fallback and must themselves look like product codes.
     for src in (old, meta or {}):
         for k in ("code","product_code","dvd_id","number"):
-            v=str(src.get(k) or "").strip()
-            if v and v.upper() not in ("AV-01","LADA") and not v.upper().startswith("LADA-"):
-                return v.upper()
-    title=str(old.get("title") or (meta or {}).get("title") or "")
-    head=title.split("•",1)[0].split("-lada",1)[0].strip()
-    pats=[
-        r"^(FC2)[-_ ]?(PPV)[-_ ]?(\\d{4,10})(?:\\b|$)",
-        r"^([0-9]{2,4}[A-Za-z]{2,12})[-_ ]?(\\d{2,7})(?:\\b|$)",
-        r"^([A-Za-z]{2,12})[-_ ]?(\\d{2,7})(?:\\b|$)",
-    ]
-    for i,pat in enumerate(pats):
-        m=re.search(pat,head,re.I)
-        if not m: continue
-        if i==0: code=f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
-        else: code=f"{m.group(1)}-{m.group(2)}"
-        if code.upper()!="AV-01" and code.upper()!="LADA" and not code.upper().startswith("LADA-"): return code.upper()
+            v=str(src.get(k) or "").strip().upper()
+            if re.fullmatch(r"(?:[0-9]{2,4})?[A-Z]{2,12}-?\\d{2,7}",v) and v!="AV-01":
+                return v
     return ""
 
 def dmm_poster(code):
