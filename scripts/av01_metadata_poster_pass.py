@@ -295,3 +295,7 @@ def main():
     atomic_json(out/"av01-catalog-enriched.json",enriched)
     print(f"[META DONE PASS] source={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
 
+
+
+if __name__=="__main__":
+    main()
