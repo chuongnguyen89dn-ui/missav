@@ -8,11 +8,7 @@ try{av01Catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',impor
 let av01Movies=Array.isArray(av01Catalog)?av01Catalog:(av01Catalog.movies||[]);
 let av01Test20={movies:[]};try{av01Test20=JSON.parse(readFileSync(new URL('./data/av01-addon-test20.json',import.meta.url),'utf8'));}catch{}
 const av01Enriched=new Map((av01Test20.movies||[]).map(x=>[String(x.id),x]));
-const av01BaseById=new Map(av01Movies.map(x=>[String(x.id),x]));
-av01Movies=[
- ...(av01Test20.movies||[]),
- ...av01Movies.filter(x=>!av01Enriched.has(String(x.id)))
-].map(x=>av01Enriched.has(String(x.id))?{...av01BaseById.get(String(x.id)),...x}:x);
+av01Movies=av01Movies.map(x=>{const e=av01Enriched.get(String(x.id));return e?{...x,...e,id:x.id}:x;});
 const av01ById=new Map(av01Movies.map(x=>['av01:'+String(x.id),x]));
 function av01Meta(x){
  const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
