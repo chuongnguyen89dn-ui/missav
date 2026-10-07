@@ -225,100 +225,47 @@ def publish_batch(results, cp, force=False):
 
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument("--out",default=str(DEFAULT_OUT))
-    ap.add_argument("--headed",action="store_true")
-    ap.add_argument("--retry-pending",action="store_true")
     ap.add_argument("--test20",action="store_true")
+    ap.add_argument("--headed",action="store_true")
     args=ap.parse_args()
-
     catalog=load_catalog()
-    if args.test20:
-        catalog=catalog[:20]
-        out=Path(args.out)/"test20"
-        # Always clean: test20 must never inherit the full-pass checkpoint.
-        if out.exists():
-            import shutil
-            shutil.rmtree(out)
-        out.mkdir(parents=True,exist_ok=True)
-        print("[META TEST20] clean scan: exactly first 20 movies",flush=True)
-    else:
-        out=Path(args.out); out.mkdir(parents=True,exist_ok=True)
-
-    cp_path=out/"checkpoint.json"; result_path=out/"metadata.json"
-    cp={"done":[],"pending":{},"started_at":now(),"source_catalog":str(CATALOG)}
-    results={}; done=set(); pending={}
-
-    if not args.test20:
-        if cp_path.exists():
-            try: cp.update(json.loads(cp_path.read_text(encoding="utf-8")))
-            except Exception: pass
-        if result_path.exists():
-            try: results=json.loads(result_path.read_text(encoding="utf-8"))
-            except Exception: results={}
-        done=set(map(str,cp.get("done") or [])); pending=cp.get("pending") or {}
-
+    if args.test20: catalog=catalog[:20]
+    out=DEFAULT_OUT/("test20" if args.test20 else "full")
+    out.mkdir(parents=True,exist_ok=True)
+    results={}; failures={}
     from playwright.sync_api import sync_playwright
-    print(f"[META] catalog IDs={len(catalog)} done={len(done)} pending={len(pending)}",flush=True)
+    print(f"[META START] IDs={len(catalog)}",flush=True)
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=not args.headed)
-        ctx=browser.new_context(locale="en-US",user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36")
+        ctx=browser.new_context(locale="en-US",user_agent="Mozilla/5.0")
         pg=ctx.new_page()
-        for idx,(vid,old) in enumerate(catalog,1):
+        for idx,(vid,oldm) in enumerate(catalog,1):
             try:
-                meta=extract_page(pg,vid,old)
+                meta=extract_page(pg,vid,oldm)
                 probe=poster_probe(meta.get("poster") or meta.get("poster_stable"))
                 meta["poster_probe"]=probe
                 meta["poster_auth"]=poster_auth_info(meta.get("poster") or "")
-                if not meta.get("title") or not meta.get("official_tags"):
-                    raise RuntimeError("metadata incomplete: missing title/tags")
-                if not probe.get("ok"): raise RuntimeError(f"poster failed: {probe}")
-                results[vid]=meta; done.add(vid); pending.pop(vid,None)
-                print(f"[META OK] {idx}/{len(catalog)} id={vid} tags={len(meta['official_tags'])} poster={probe.get('status')}",flush=True)
+                missing=[]
+                if not meta.get("title"): missing.append("title")
+                if not meta.get("official_tags"): missing.append("tags")
+                if not probe.get("ok"): missing.append("poster")
+                meta["missing_fields"]=missing
+                meta["metadata_complete"]=not missing
+                results[vid]=meta
+                print(f"[META] {idx}/{len(catalog)} id={vid} missing={missing}",flush=True)
             except Exception as e:
-                pending[vid]={"error":repr(e),"ts":now(),"ts_epoch":time.time()}
-                print(f"[META PENDING] {idx}/{len(catalog)} id={vid} {e!r}",flush=True)
-            cp.update({"done":sorted(done,key=lambda x:int(x)),"pending":pending,"updated_at":now(),"catalog_ids":len(catalog),"done_count":len(done),"pending_count":len(pending)})
-            atomic_json(result_path,results); atomic_json(cp_path,cp)
+                failures[vid]={"error":repr(e),"at":now()}
+                print(f"[META ERROR] {idx}/{len(catalog)} id={vid} {e!r}",flush=True)
+            atomic_json(out/"results.json",results)
+            atomic_json(out/"failures.json",failures)
         browser.close()
-
-    if args.test20:
-        report_path=ROOT/"data"/"av01-metadata-test20-report.json"
-        report={"attempted":len(catalog),"ok":len(done),"pending":len(pending),
-                "done_ids":sorted(done,key=lambda x:int(x)),"failures":pending,
-                "results":results,"updated_at":now()}
-        atomic_json(report_path,report)
-        print(f"[META TEST20 DONE] attempted={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
-        try:
-            git_run("add","data/av01-metadata-test20-report.json")
-            st=git_run("status","--porcelain",check=False).stdout
-            if "data/av01-metadata-test20-report.json" in st:
-                git_run("commit","-m",f"test(av01): save test20 report ok={len(done)} pending={len(pending)}")
-            git_run("push","origin","HEAD:av01-metadata-poster-pass")
-            print("[META TEST20 REPORT PUSHED]",flush=True)
-        except Exception as e:
-            print(f"[META TEST20 REPORT PUSH FAILED] {e!r}",flush=True)
-        return
-
-    enriched=[]
-    for vid,old in catalog:
-        x=dict(old)
-        if vid in results:
-            x.update(results[vid]); x["metadata_ok"]=True; x["poster_ok"]=bool(results[vid].get("poster_probe",{}).get("ok"))
-        enriched.append(x)
-    atomic_json(out/"av01-catalog-enriched.json",enriched)
-    print(f"[META DONE PASS] source={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
-
-
+    report={"attempted":len(catalog),"records":len(results),"errors":len(failures),
+            "complete":sum(1 for x in results.values() if x.get("metadata_complete")),
+            "incomplete":sum(1 for x in results.values() if not x.get("metadata_complete")),
+            "failures":failures,"updated_at":now()}
+    atomic_json(out/"report.json",report)
+    print(f"[META DONE] attempted={report['attempted']} records={report['records']} complete={report['complete']} incomplete={report['incomplete']} errors={report['errors']}",flush=True)
+    print(f"[REPORT] {out/'report.json'}",flush=True)
 
 if __name__=="__main__":
-    main()    if args.test20:
-        # Save locally only. Upload is a separate explicit command so scanner success
-        # is never turned into a scan failure by git/worktree state.
-        report_path=out/"test20-report.json"
-        report={"attempted":len(catalog),"ok":len(done),"pending":len(pending),
-                "done_ids":sorted(done,key=lambda x:int(x)),"failures":pending,
-                "results":results,"updated_at":now()}
-        atomic_json(report_path,report)
-        print(f"[META TEST20 DONE] attempted={len(catalog)} ok={len(done)} pending={len(pending)}",flush=True)
-        print(f"[META TEST20 REPORT LOCAL] {report_path}",flush=True)
-        return
+    main()
