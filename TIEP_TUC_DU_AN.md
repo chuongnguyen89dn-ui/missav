@@ -551,3 +551,66 @@ Khi được yêu cầu **“tiếp tục dự án AV01”**:
 7. Bảo toàn direct-token baseline của commit `c909ebd`.
 
 **Không quay lại các scanner cũ đã thất bại.**
+
+
+---
+
+# CẬP NHẬT 2026-10-07 — HAI PIPELINE AV01 CHẠY SONG SONG
+
+## A. PIPELINE QUÉT LINK / FULL CATALOG — BẢN ĐANG DÙNG
+
+Đây là pipeline đã tạo và publish catalog hiện tại **2120 phim**. Không thay bằng workflow test 20 cũ.
+
+- Scanner chính: `scripts/av01_hottest_filtered_proven.py`
+- Launcher full scan Windows: `SCAN-AV01-FULL.cmd`
+- Launcher liên quan: `scan-av01-hottest-20.cmd` (hiện gọi cùng scanner với `--count 0`)
+- Checkpoint local: `av01_hottest_full/checkpoint.json`
+- Publisher: `scripts/publish_av01_checkpoint_all.py`
+- Catalog publish: `data/av01-catalog.json`
+- Nguồn: `https://www.av01.media/en/videos/hottest`
+- Catalog GitHub đã xác nhận ngày 2026-10-07: **2120 phim**
+- Commit publish mốc 2120: `cf078dff92644619c98bd5f500dc44391c03607c`
+
+Luồng:
+`SCAN-AV01-FULL.cmd` -> `scripts/av01_hottest_filtered_proven.py` -> `av01_hottest_full/checkpoint.json` -> `scripts/publish_av01_checkpoint_all.py` -> `data/av01-catalog.json`.
+
+`SCAN-AV01-FULL.cmd` chạy:
+```bat
+python scripts\av01_hottest_filtered_proven.py --count 0 --out av01_hottest_full
+```
+Nếu scanner lỗi, launcher chờ 15 giây rồi chạy lại từ checkpoint.
+
+**CẢNH BÁO:** Không chạy nhầm `.github/workflows/av01-scan.yml` để tiếp tục full scan. Workflow đó xóa `data/av01-progress.json` và `data/av01-catalog.json`, sau đó chạy scanner Node theo batch 20; có nguy cơ thay catalog 2120 bằng catalog test nhỏ.
+
+## B. PIPELINE METADATA / POSTER — TEST ĐÚNG 20 PHIM ĐẦU
+
+Pipeline này độc lập với full scanner và chạy song song. Nó không được thay/reset `data/av01-catalog.json`.
+
+- Dữ liệu enrichment test: `data/av01-addon-test20.json`
+- Số record: **20**
+- Đã đối chiếu ngày 2026-10-07: **20/20 ID khớp chính xác 20 record đầu tiên của `data/av01-catalog.json`**.
+- Metadata/thông tin lấy theo AV01.
+- Poster DMM khi có.
+- Nếu không có poster phù hợp thì để trống, không ép poster sai.
+- 15/20 record hiện có poster DMM; 5 record không có poster trong bộ test hiện tại.
+- Commit tạo dữ liệu 20 phim: `a3c2683de0ffe76209324b1c54b99b3bd1047ec4`
+- Commit tích hợp metadata: `456ade71918013d0f22c86a3662d274c0a37ef58`
+
+20 ID đầu đã xác nhận:
+`221350, 221415, 221418, 221277, 221343, 221374, 221417, 221331, 221416, 221442, 221441, 221373, 221344, 221107, 221341, 221267, 221335, 221100, 221082, 221435`.
+
+Các code đầu tương ứng gồm `YUJ-074`, `NPJS-284`, `NPJS-278`, `CAWB-040`, `ADN-793`, `SIRO-5739`, `NPJB-131`, `JBD-313`, `NPJS-281`, `390JNT-125`, `200GANA-3463`, `300MIUM-1452` và các record LADA tiếp theo.
+
+## C. CÁCH GHÉP ADDON — KHÔNG ĐƯỢC NHẦM 20 VỚI 2120
+
+- Catalog chính luôn là `data/av01-catalog.json` = 2120 phim tại mốc hiện tại.
+- `data/av01-addon-test20.json` chỉ là lớp metadata/poster enrichment cho 20 phim đầu.
+- Ghép theo `id`: chỉ override metadata/poster cho ID trùng.
+- Không prepend một bộ 20 độc lập.
+- Không tạo addon/manifest AV01 thứ hai.
+- Catalog addon hiện tại: `av01-filtered` / tên `AV01 · Hottest · Filtered 1080p`.
+- Commit sửa merge đúng kiến trúc: `e2f3b2ddda2f0a4b1de5c0b1dc78c6c702a8308b`.
+
+Hai pipeline phải tiếp tục **song song**:
+1. Full scanner tiếp tục quét/verify/publish số lượng phim.
+2. Metadata/poster enrichment tiếp tục làm thông tin cho các ID từ chính catalog scanner.
