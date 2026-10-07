@@ -235,15 +235,43 @@ async function avProxyTarget(req, res, id, target) {
   if (etag) headers.etag = etag;
   if (lastModified) headers['last-modified'] = lastModified;
 
-  res.writeHead(r.status, headers);
-  if (req.method === 'HEAD' || !r.body) return res.end();
+  // Buffer the segment before returning it so an upstream body stall can be
+  // retried just like a fetch timeout. This is especially important after seek.
+  let body;
+  let lastBodyError = null;
+  for (let bodyAttempt = 1; bodyAttempt <= 3; bodyAttempt++) {
+    try {
+      if (bodyAttempt === 1) {
+        body = Buffer.from(await r.arrayBuffer());
+      } else {
+        const retry = await fetchUpstream(id, u.toString(), true, reqHeaders);
+        console.log('[AV01_NATIVE_BODY_RETRY]', JSON.stringify({
+          id, path: u.pathname, attempt: bodyAttempt, status: retry.status
+        }));
+        if (!retry.ok) throw new Error(`upstream ${retry.status}`);
+        body = Buffer.from(await retry.arrayBuffer());
+        r = retry;
+      }
+      if (body?.length) break;
+    } catch (e) {
+      lastBodyError = e;
+      console.error('[AV01_NATIVE_BODY_TIMEOUT]', JSON.stringify({
+        id, path: u.pathname, attempt: bodyAttempt, error: safeErr(e)
+      }));
+      body = null;
+    }
+  }
+  if (!body) {
+    console.error('[AV01_NATIVE_BODY_ERROR]', JSON.stringify({
+      id, path: u.pathname, attempts: 3, error: safeErr(lastBodyError)
+    }));
+    res.writeHead(504, { ...cors, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    return res.end('AV01 upstream body timeout after retries\\n');
+  }
 
-  const nodeStream = Readable.fromWeb(r.body);
-  nodeStream.on('error', err => {
-    console.error('[AV01_NATIVE_STREAM_ERROR]', JSON.stringify({ id, path: u.pathname, error: safeErr(err) }));
-    if (!res.destroyed) res.destroy(err);
-  });
-  nodeStream.pipe(res);
+  headers['content-length'] = String(body.length);
+  res.writeHead(r.status, headers);
+  return res.end(body);
 }
 
 async function aj(url, opt = {}) {
