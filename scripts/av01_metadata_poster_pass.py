@@ -115,7 +115,13 @@ def extract_page(pg, vid, old):
 
     title=mfirst("og:title","twitter:title") or (d.get("headings") or [""])[0]
     description=mfirst("og:description","description","twitter:description")
-    poster=mfirst("og:image","twitter:image") or str(video_ld.get("thumbnailUrl") or "")
+    poster_source=""
+    vp=d.get("videoPosters") or []
+    poster=vp[0] if vp else ""
+    if poster: poster_source="video.poster"
+    if not poster:
+        poster=mfirst("og:image","twitter:image") or str(video_ld.get("thumbnailUrl") or "")
+        if poster: poster_source="meta/jsonld"
     if not poster:
         imgs=d.get("images") or []
         candidates=[x.get("src") for x in imgs if x.get("src") and int(x.get("width") or 0)>=240 and int(x.get("height") or 0)>=120]
