@@ -360,6 +360,7 @@ if(path==='/diagnose' || path==='/diagnose.json')return diagnose(req,res);
 if(path.startsWith('/hls/'))return proxyHls(req,res,path);
 if(path.startsWith('/play/'))return filmProxy(req,res,path);
 if(path==='/manifest.json')return json(res,publicManifest);
+ if(path==='/__av01_status.json')return json(res,{manifest:publicManifest.version,av01_movies:av01Movies.length,enriched_loaded:av01Enriched.size,enriched_matched:av01Movies.filter(x=>av01Enriched.has(String(x.id))).length,first20:av01Movies.filter(x=>av01Enriched.has(String(x.id))).slice(0,20).map(x=>({id:x.id,poster:x.poster||null}))});
 if(path==='/catalog/movie/missav-1080.json')return json(res,{metas:verified.map(filmMeta)});
 if(path==='/catalog/movie/ikisoda.json'){const xs=await ikisodaMovies();return json(res,{metas:xs.map(ikisodaMetaFor)});}
 if(path==='/catalog/movie/av01-filtered.json')return json(res,{metas:av01Movies.map(av01Meta)});
