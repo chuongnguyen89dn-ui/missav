@@ -1,8 +1,10 @@
 name: Remove amateur-tagged AV01 movies
 on:
+  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/remove-av01-amateur.yml'
+      - 'scripts/remove_av01_amateur.py'
 jobs:
   remove:
     runs-on: ubuntu-latest
