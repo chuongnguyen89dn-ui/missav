@@ -1,0 +1,23 @@
+name: Remove amateur-tagged AV01 movies
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-av01-amateur.yml'
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Remove amateur movies from catalog
+        run: python3 scripts/remove_av01_amateur.py
+      - name: Commit cleaned catalog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/av01-catalog.json data/av01-metadata-enriched.json data/av01-addon-test20.json 2>/dev/null || git add data/av01-catalog.json
+          git diff --cached --quiet || git commit -m "data(av01): remove amateur-tagged movies from catalog"
+          git push origin HEAD:main
