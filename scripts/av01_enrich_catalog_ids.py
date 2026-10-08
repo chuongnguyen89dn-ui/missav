@@ -1,75 +1,118 @@
 #!/usr/bin/env python3
-"""Enrich the existing AV01 catalog by its IDs; never replace the scanner or HLS fields."""
-import argparse, json, re, time
+"""AV01 metadata enrichment: resumable, GitHub publish every 20 successes, no addon deploy."""
+import argparse, json, os, subprocess, time
+from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urljoin
 from playwright.sync_api import sync_playwright
 
+ROOT=Path(__file__).resolve().parent.parent
+def atomic(path,data):
+    path.parent.mkdir(parents=True,exist_ok=True)
+    tmp=path.with_suffix(path.suffix+'.tmp')
+    tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
+    os.replace(tmp,path)
+
 def extract(page):
-    return page.evaluate("""() => {
-      const text = e => (e?.textContent || '').trim();
-      const links = [...document.querySelectorAll('a[href]')];
-      const refs = kind => links.filter(a => new RegExp('/(?:en|vn|ja|zh(?:-cn|-tw)?)/'+kind+'/\\\\d+(?:/|$)','i').test(new URL(a.href).pathname))
-        .map(a => ({name:text(a),url:a.href})).filter(x=>x.name);
-      const tagrefs = refs('tag').map(x=>({...x,id:(x.url.match(/\\/tag\\/(\\d+)/)||[])[1]||''}));
-      const tags=[...new Map(tagrefs.map(x=>[x.id,x])).values()];
-      const ld=[...document.querySelectorAll('script[type="application/ld+json"]')].map(x=>{try{return JSON.parse(x.textContent)}catch{return null}}).filter(Boolean);
-      const og = n => document.querySelector('meta[property="'+n+'"]')?.content||'';
+    return page.evaluate(r"""() => {
+      const text=e=>(e?.textContent||'').trim();
+      const links=[...document.querySelectorAll('a[href]')];
+      const refs=kind=>links.filter(a=>new RegExp('/(?:en|vn|ja|zh(?:-cn|-tw)?)/'+kind+'/\\d+(?:/|$)','i').test(new URL(a.href).pathname))
+        .map(a=>({name:text(a),url:a.href})).filter(x=>x.name);
+      const tags=refs('tag').map(x=>({...x,id:(x.url.match(/\/tag\/(\d+)/)||[])[1]||''}));
+      const og=n=>document.querySelector('meta[property="'+n+'"]')?.content||'';
       return {title:og('og:title'),description:og('og:description'),poster:og('og:image'),
-        official_tags:tags.map(x=>x.name),official_tag_refs:tags,
-        actresses:refs('actress'),maker:refs('maker')[0]||null,jsonld:ld};
+        official_tags:[...new Set(tags.map(x=>x.name))],official_tag_refs:tags,
+        actresses:refs('actress'),maker:refs('maker')[0]||null};
     }""")
+
+def git_publish(path, batch):
+    rel=str(path.relative_to(ROOT))
+    subprocess.run(['git','add','--',rel],cwd=ROOT,check=True)
+    staged=subprocess.run(['git','diff','--cached','--quiet','--',rel],cwd=ROOT)
+    if staged.returncode==0:return
+    if staged.returncode!=1:raise RuntimeError('git diff failed')
+    subprocess.run(['git','commit','-m',f'data(av01): publish metadata batch through {batch} IDs','--',rel],cwd=ROOT,check=True)
+    subprocess.run(['git','push','origin','HEAD:main'],cwd=ROOT,check=True)
 
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument('--catalog',default='data/av01-catalog.json')
     ap.add_argument('--out',default='data/av01-metadata-enriched.json')
-    ap.add_argument('--checkpoint',default='data/av01-metadata-checkpoint.json')
-    ap.add_argument('--limit',type=int,default=0,help='0 means every ID')
+    ap.add_argument('--checkpoint',default='av01_metadata_full/checkpoint.json')
+    ap.add_argument('--heartbeat',default='av01_metadata_full/heartbeat.json')
+    ap.add_argument('--limit',type=int,default=0)
     ap.add_argument('--delay',type=float,default=1.5)
+    ap.add_argument('--publish',action='store_true',help='Commit/push every 20 newly completed IDs; never deploy')
     args=ap.parse_args()
-    raw=json.loads(Path(args.catalog).read_text(encoding='utf-8'))
-    movies=raw if isinstance(raw,list) else raw['movies']
-    cp=Path(args.checkpoint)
-    done=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {}
-    count=0
+    resolve=lambda x:(ROOT/x).resolve()
+    catalog=json.loads(resolve(args.catalog).read_text(encoding='utf-8'))
+    movies=catalog if isinstance(catalog,list) else catalog['movies']
+    cp,out,hb=map(resolve,(args.checkpoint,args.out,args.heartbeat))
+    state=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {'done':{},'pending':{},'published':0}
+    done=state.setdefault('done',{})
+    pending=state.setdefault('pending',{})
+    state.setdefault('published',0)
+    processed=0
+    last_progress=time.time()
+    def save():
+        atomic(cp,state)
+    def output():
+        # Metadata-only layer: never rewrite the HLS/catalog source.
+        atomic(out,{'count':len(done),'movies':[{'id':vid,**data} for vid,data in done.items()]})
+    def status():
+        atomic(hb,{'ts':datetime.now(timezone.utc).isoformat(),'total':len(movies),
+                   'complete':len(done),'pending':len(pending),'published':state['published']})
+    def publish_ready():
+        # Batch watermark is advanced only after successful git push.
+        if len(done)-state['published']<20:return
+        output()
+        if args.publish:
+            git_publish(out,(len(done)//20)*20)
+            state['published']=(len(done)//20)*20
+            save()
     with sync_playwright() as pw:
-      browser=pw.chromium.launch(headless=True)
-      page=browser.new_page()
-      for movie in movies:
-        vid=str(movie['id'])
-        if vid in done and done[vid].get('status')=='ok':continue
-        if args.limit and count>=args.limit:break
-        url=movie.get('page_url') or movie.get('url') or 'https://www.av01.media/en/video/'+vid
+        browser=pw.chromium.launch(headless=True)
+        page=browser.new_page()
         try:
-          page.goto(url,wait_until='domcontentloaded',timeout=30000)
-          info={}
-          for _ in range(10):
-            info=extract(page)
-            if info['official_tags']:break
-            page.wait_for_timeout(500)
-          if not info['official_tags']:raise ValueError('metadata not hydrated')
-          info.pop('jsonld',None)
-          done[vid]={'status':'ok','data':info}
-          print(f'META OK {vid} ({sum(v.get("status")=="ok" for v in done.values())}/{len(movies)})',flush=True)
-        except Exception as e:
-          done[vid]={'status':'retry','error':str(e)[:180]}
-          print(f'META RETRY {vid}: {e}',flush=True)
-        cp.parent.mkdir(parents=True,exist_ok=True)
-        cp.write_text(json.dumps(done,ensure_ascii=False,indent=2),encoding='utf-8')
-        count+=1
-        time.sleep(args.delay)
-      browser.close()
-    enriched=[]
-    for movie in movies:
-      item=dict(movie)
-      result=done.get(str(movie['id']),{})
-      if result.get('status')=='ok':
-        data=result['data']
-        for key in ('description','poster','official_tags','official_tag_refs','actresses','maker'):
-          if data.get(key):item[key]=data[key]
-      enriched.append(item)
-    Path(args.out).write_text(json.dumps({'movies':enriched},ensure_ascii=False,indent=2),encoding='utf-8')
-    print(f'FINISHED total={len(movies)} ok={sum(x.get("status")=="ok" for x in done.values())} pending={sum(x.get("status")!="ok" for x in done.values())}',flush=True)
+            while True:
+                candidates=[m for m in movies if str(m['id']) not in done and
+                    pending.get(str(m['id']),{}).get('retry_after',0)<=time.time()]
+                if not candidates:
+                    if len(done)==len(movies):break
+                    next_retry=min((x['retry_after'] for x in pending.values()),default=time.time()+30)
+                    sleep=min(max(1,next_retry-time.time()),30)
+                    status();time.sleep(sleep)
+                    continue
+                for movie in candidates:
+                    vid=str(movie['id'])
+                    if args.limit and processed>=args.limit:break
+                    try:
+                        page.goto(movie.get('url') or f'https://www.av01.media/en/video/{vid}',wait_until='domcontentloaded',timeout=30000)
+                        info={}
+                        for _ in range(12):
+                            info=extract(page)
+                            if info['official_tags']:break
+                            page.wait_for_timeout(500)
+                        if not info['official_tags']:raise RuntimeError('official tags not hydrated')
+                        done[vid]=info
+                        pending.pop(vid,None)
+                        last_progress=time.time()
+                        print(f'META OK {vid} {len(done)}/{len(movies)}',flush=True)
+                    except Exception as e:
+                        prior=pending.get(vid,{})
+                        attempts=prior.get('attempts',0)+1
+                        delay=min(900,180*(2**min(attempts-1,3)))
+                        pending[vid]={'attempts':attempts,'retry_after':time.time()+delay,'reason':str(e)[:200]}
+                        print(f'META RETRY {vid} after {delay}s: {e}',flush=True)
+                    save();status();publish_ready()
+                    processed+=1
+                    if time.time()-last_progress>300:
+                        print('WATCHDOG no successful progress in 300s; restart via launcher',flush=True)
+                        raise SystemExit(75)
+                    time.sleep(args.delay)
+                if args.limit and processed>=args.limit:break
+        finally:
+            output();save();status();browser.close()
+    print(f'FINISHED total={len(movies)} ok={len(done)} pending={len(pending)} published={state["published"]}',flush=True)
 
 if __name__=='__main__':main()
