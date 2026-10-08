@@ -39,8 +39,12 @@ KEEP = [
 ]
 
 # Hard blocks are evaluated ONLY against official #tags of the current video.
+# Never accept amateur-tagged titles, regardless of other matching tags.
+# Applies to the official tags only; metadata-only titles are not sufficient.
+AMATEUR_TAG = re.compile(r"^(?:amateur|nghiệp\\s*dư|素人)$", re.I)
+
 BLOCK = [
-    ("Anal", r"^(?:anal|hậu\\s*môn|lỗ\\s*nhị)$"),
+    ("Amateur / Nghiệp dư / 素人", r"^(?:amateur|nghiệp\\s*dư|素人)$"),\n    ("Anal", r"^(?:anal|hậu\\s*môn|lỗ\\s*nhị)$"),
     ("Toy/Sex Toys", r"^(?:toy|toys|sex\s*toy|sex\s*toys|dildo|dildos)$"),
     ("Cross Dressing", r"^(?:cross[\s-]*dressing|crossdresser|cross[\s-]*dresser)$"),
     ("Lesbian/Gay", r"^(?:lesbian|gay|đồng\\s*tính\\s*nữ|đồng\\s*tính\\s*nam|bách\\s*hợp)$"),
