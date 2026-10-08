@@ -30,7 +30,7 @@ def extract(page):
 def movie_code(movie, info):
     """Extract the product ID, never treat LADA/AV-DEBUT as a movie code."""
     raw=' '.join(str(x or '') for x in (movie.get('title'),info.get('title'),movie.get('code')))
-    patterns=(r'FC2[-_ ]?PPV[-_ ]?(\\d{5,9})',r'(?<![A-Z0-9])([A-Z]{2,6})[-_ ]?(\\d{3,6})(?![A-Z0-9])')
+    patterns=(r'FC2[-_ ]?PPV[-_ ]?(\d{5,9})',r'(?<![A-Z0-9])([A-Z]{2,6})[-_ ]?(\d{3,6})(?![A-Z0-9])')
     for pat in patterns:
         for match in re.finditer(pat,raw,re.I):
             if pat.startswith('FC2'): return 'FC2-PPV-'+match.group(1)
