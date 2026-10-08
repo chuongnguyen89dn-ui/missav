@@ -317,7 +317,6 @@ http.createServer = function(handler, ...rest) {
           catalogs: [
             { type: 'movie', id: 'missav-1080', name: 'MissAV · Verified 1080p' },
             { type: 'movie', id: 'ikisoda', name: 'ikisoda' },
-            { type: 'movie', id: 'av01-test', name: 'Test AV01' },
             { type: 'movie', id: 'av01-filtered', name: 'AV01 · Hottest · Filtered 1080p' }
           ],
           idPrefixes: ['missav:', 'ikisoda:', 'av01:']
