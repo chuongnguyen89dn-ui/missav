@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """AV01 metadata enrichment: resumable, GitHub publish every 20 successes, no addon deploy."""
 import argparse, json, os, re, subprocess, time
+from urllib.request import Request, urlopen
 from urllib.parse import quote
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,6 +34,21 @@ def dmm_poster(page, movie, info):
     if not match:
         return ''
     code=(match.group(1)+'-'+match.group(2)).upper()
+    # First probe the proven DMM cover naming scheme (e.g. YUJ-074).
+    # Accept only actual image responses, never a guessed or broken URL.
+    stem=(match.group(1)+match.group(2)).lower()
+    for suffix in ('pl.jpg','ps.jpg'):
+        candidate=f'https://pics.dmm.co.jp/mono/movie/adult/{stem}/{stem}{suffix}'
+        try:
+            req=Request(candidate,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.dmm.co.jp/'})
+            with urlopen(req,timeout=12) as resp:
+                mime=resp.headers.get('Content-Type','').lower()
+                header=resp.read(16)
+                if resp.status==200 and mime.startswith('image/') and (header.startswith(bytes.fromhex('ffd8ff')) or header.startswith(bytes.fromhex('89504e47')) or header.startswith(b'RIFF')):
+                    print(f'POSTER VERIFIED {code} {candidate}',flush=True)
+                    return candidate
+        except Exception as exc:
+            print(f'POSTER PROBE {code} {suffix}: {type(exc).__name__}',flush=True)
     try:
         page.goto('https://www.dmm.co.jp/search/=/searchstr='+quote(code)+'/',wait_until='domcontentloaded',timeout=30000)
         page.wait_for_timeout(1200)
@@ -144,6 +160,8 @@ def main():
                             page.wait_for_timeout(500)
                         if not info['official_tags']:raise RuntimeError('official tags not hydrated')
                         info['poster']=dmm_poster(page,movie,info)
+                        if not info['poster']:
+                            raise RuntimeError('DMM poster not verified; metadata not marked complete')
                         info['poster_status']='verified_dmm' if info['poster'] else 'not_found'
                         done[vid]=info
                         pending.pop(vid,None)
