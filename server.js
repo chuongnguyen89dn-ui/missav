@@ -52,7 +52,7 @@ const manifest={
   description:'AV01 Hottest verified scanner catalog with metadata enrichment',
   resources:['catalog','meta','stream'],
   types:['movie'],
-  catalogs:[{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p'}],
+  catalogs:[{type:'movie',id:'av01-filtered',name:'AV01 · Hottest · Filtered 1080p',extra:[{name:'search',isRequired:false}]}],
   idPrefixes:['av01:']
 };
 
@@ -61,7 +61,18 @@ http.createServer(async(req,res)=>{
   if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end();}
   if(path==='/'||path==='/health')return json(res,{status:'ok',movies:movies.length});
   if(path==='/manifest.json')return json(res,manifest);
-  if(path==='/catalog/movie/av01-filtered.json')return json(res,{metas:movies.map(meta)});
+  if(path==='/catalog/movie/av01-filtered.json'||path.startsWith('/catalog/movie/av01-filtered/')){
+    const extra=path.slice('/catalog/movie/av01-filtered/'.length);
+    if(path!=='/catalog/movie/av01-filtered.json'&&!extra.endsWith('.json'))return json(res,{error:'Not found'},404);
+    const params=new URLSearchParams(extra.endsWith('.json')?extra.slice(0,-5).replace(/\\//g,'&'):'');
+    const query=(params.get('search')||'').trim().toLocaleLowerCase();
+    const normalized=query.replace(/[^a-z0-9]/g,'');
+    const filtered=!query?movies:movies.filter(x=>{
+      const fields=[x.title,x.code,x.dvd_id,x.id,x.description].filter(Boolean).map(v=>String(v).toLocaleLowerCase());
+      return fields.some(v=>v.includes(query)||(normalized&&v.replace(/[^a-z0-9]/g,'').includes(normalized)));
+    });
+    return json(res,{metas:filtered.map(meta)});
+  }
   if(path.startsWith('/meta/movie/av01:')&&path.endsWith('.json')){
     const x=byId.get(path.slice('/meta/movie/'.length,-5));
     return x?json(res,{meta:meta(x)}):json(res,{error:'Not found'},404);
