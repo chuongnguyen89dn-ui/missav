@@ -56,6 +56,9 @@ def dmm_cover(code):
     m=re.fullmatch(r'([A-Z]{2,8})-(\d{2,6})',code,re.I)
     if not m:return ''
     stem=(m.group(1)+m.group(2)).lower()
+    # MURIKURI uses a DMM product stem prefixed with '1' (e.g. 1murikuri018).
+    if m.group(1).upper() == 'MURIKURI':
+        stem='1'+stem
     for suffix in ('pl.jpg','ps.jpg'):
         url=f'https://pics.dmm.co.jp/mono/movie/adult/{stem}/{stem}{suffix}'
         if verify_image(url):
