@@ -639,3 +639,158 @@ Hai pipeline phải tiếp tục **song song**:
 **Giới hạn cần kiểm thử:** Mới cập nhật code, chưa có log chạy thật 20 phim để xác nhận HTML selectors và dữ liệu diễn viên/hãng. Cần test 20 ID đầu trước full run. Poster lấy từ og:image của AV01, chưa tái hiện đối chiếu DMM như bộ test cũ; không được tự tuyên bố 15/20 poster DMM với script mới. Script chưa tự động cập nhật add-on. Không khởi chạy workflow `.github/workflows/av01-scan.yml` vì workflow này có thể reset catalog.
 
 **Lưu ý:** Publish chỉ khi có `--publish`. Nếu chạy thử `--limit 20` thì chỉ tạo checkpoint và JSON local, không push. Sau khi kiểm tra chất lượng mới dùng launcher chạy full.
+
+
+---
+
+# CẬP NHẬT BẮT BUỘC 2026-10-08 — LƯU ĐẦY ĐỦ 2 SCANNER ĐANG DÙNG
+
+> Đính chính bàn giao trước: script metadata/poster KHÔNG bị mất. Script đang tồn tại trên branch main là `scripts/av01_enrich_catalog_ids.py`. Khi tiếp tục dự án phải dùng đúng các file dưới đây, không tự viết lại từ trí nhớ.
+
+## 1. SCANNER LINK/HLS — FULL AV01 CATALOG
+
+### File chính
+- `scripts/av01_hottest_filtered_proven.py`
+- Launcher Windows: `SCAN-AV01-FULL.cmd`
+- Publisher toàn checkpoint: `scripts/publish_av01_checkpoint_all.py`
+
+### Lệnh chạy chuẩn
+```bat
+SCAN-AV01-FULL.cmd
+```
+
+Tương đương gọi trực tiếp:
+```bat
+python scripts\av01_hottest_filtered_proven.py --count 0 --out av01_hottest_full
+```
+
+Publish toàn bộ accepted trong checkpoint:
+```bat
+python scripts\publish_av01_checkpoint_all.py
+```
+
+### Dữ liệu
+- Nguồn: `https://www.av01.media/en/videos/hottest`
+- Checkpoint: `av01_hottest_full/checkpoint.json`
+- Heartbeat: `av01_hottest_full/heartbeat.json`
+- Catalog publish: `data/av01-catalog.json`
+- Mốc catalog đã xác nhận: **2120 phim**.
+
+### Flow chính
+Hottest -> pagination API -> detail từng ID -> official tags -> lọc năm 2024/2025/2026 -> hard-block tag -> geo.js -> cdn-access -> access_token -> sv3 1080p -> sign iw01.xyz -> probe 200/200 -> checkpoint -> publish GitHub.
+
+### Quy tắc quan trọng
+- Không reset `data/av01-catalog.json` khi tiếp tục scan.
+- Không dùng workflow test batch 20 để thay full scanner.
+- Resolver chuẩn là direct token `geo.js -> cdn-access`, không quay lại cơ chế click player cũ.
+- Chỉ accepted khi probe nguồn thành công.
+- Scanner có checkpoint/watchdog; launcher tự restart sau lỗi và tiếp tục checkpoint.
+
+## 2. SCANNER METADATA + POSTER — CHẠY SONG SONG VỚI SCANNER LINK
+
+### File chính
+`scripts/av01_enrich_catalog_ids.py`
+
+Đây là script thật đang tồn tại trên branch `main`, không phải script phục dựng.
+
+### Lệnh chạy toàn catalog và publish mỗi 20 ID hoàn tất
+```bat
+python scripts\av01_enrich_catalog_ids.py --publish
+```
+
+### Lệnh test 20 lượt
+```bat
+python scripts\av01_enrich_catalog_ids.py --limit 20
+```
+
+Nếu muốn test 20 và đồng thời bật publish:
+```bat
+python scripts\av01_enrich_catalog_ids.py --limit 20 --publish
+```
+
+### Input / output / trạng thái
+- Input: `data/av01-catalog.json`
+- Output metadata layer: `data/av01-metadata-enriched.json`
+- Checkpoint: `av01_metadata_full/checkpoint.json`
+- Heartbeat: `av01_metadata_full/heartbeat.json`
+- Mặc định delay: 1.5 giây.
+- `--limit 0` = chạy toàn bộ ID.
+- `--publish` = commit/push output theo batch 20 newly completed IDs; không deploy addon.
+
+### Metadata script lấy
+- title
+- description
+- official tags
+- official tag refs
+- actresses
+- maker
+- poster DMM/FANZA đã kiểm tra theo code.
+
+### Quy tắc poster DMM
+- Không dùng poster AV01 tokenized/expiring làm nguồn poster enrichment.
+- Lấy code từ `movie.code` hoặc title.
+- Code regex hiện tại: prefix chữ 2–8 ký tự + phần số 2–6 chữ số.
+- Search DMM/FANZA theo code.
+- Chỉ nhận kết quả có code khớp.
+- Chỉ nhận URL ảnh HTTPS thuộc `pics.dmm.co.jp`.
+- Actress được dedupe theo actress ID/URL.
+
+### Hành vi checkpoint hiện tại RẤT QUAN TRỌNG
+Khi khởi động, script chỉ giữ record `done` nếu:
+1. ID vẫn còn trong catalog filtered hiện tại; và
+2. record có poster không rỗng.
+
+Do đó **record metadata không tìm được poster DMM sẽ bị loại khỏi done và được quét lại ở lần chạy sau**. Đây là hành vi hiện tại của commit `662b87f40fdf50cdebf4a78b436e00388882d181`; không được nhầm là scanner bị mất checkpoint.
+
+### Lịch sử commit quan trọng của scanner metadata/poster
+- `988613022a11f7855d854940dab41827fef8bc8d` — tạo `scripts/av01_enrich_catalog_ids.py`: enrichment theo toàn bộ ID catalog, checkpoint và output riêng.
+- `f8c9cceeced51cc90e23d1afd30863a74493fd43` — DMM-only verified-code poster lookup, bỏ AV01 expiring poster, dedupe actresses.
+- `4a06aae396b907fc1c8ec9b93c5edc85dda167bb` — sửa DMM code regex và poster URL validation.
+- `4e8962b34bfee5e6bfaf14fc8b75ba4803984c94` — sửa regex phần số để thực sự match digits.
+- `662b87f40fdf50cdebf4a78b436e00388882d181` — record thiếu poster được coi chưa hoàn chỉnh và quét lại.
+
+### Bộ test 20 phim cũ để đối chứng
+- Output test: `data/av01-addon-test20.json`
+- 20/20 ID đã đối chiếu khớp 20 phim đầu catalog tại thời điểm test.
+- Mốc test có 15/20 poster DMM.
+- Commit dữ liệu test: `a3c2683de0ffe76209324b1c54b99b3bd1047ec4`.
+- Commit addon dùng enrichment: `456ade71918013d0f22c86a3662d274c0a37ef58`.
+
+## 3. QUY TẮC KIẾN TRÚC — KHÔNG TRỘN HAI SCANNER
+
+### Scanner A — LINK/HLS
+```text
+scripts/av01_hottest_filtered_proven.py
+  -> av01_hottest_full/checkpoint.json
+  -> data/av01-catalog.json
+```
+
+### Scanner B — METADATA/POSTER
+```text
+data/av01-catalog.json
+  -> scripts/av01_enrich_catalog_ids.py
+  -> av01_metadata_full/checkpoint.json
+  -> data/av01-metadata-enriched.json
+```
+
+Scanner metadata chỉ enrich theo ID đã có trong catalog scanner. Nó không được thay thế, reset hoặc khôi phục phim đã bị scanner link/filter loại.
+
+## 4. LỆNH KIỂM TRA NHANH KHI MỞ PHIÊN MỚI
+
+```bat
+git status
+git log -10 --oneline
+python scripts\av01_enrich_catalog_ids.py --help
+```
+
+Đối với scanner link:
+```bat
+SCAN-AV01-FULL.cmd
+```
+
+Đối với metadata/poster:
+```bat
+python scripts\av01_enrich_catalog_ids.py --publish
+```
+
+Không được tuyên bố script metadata bị mất nếu chưa kiểm tra `scripts/av01_enrich_catalog_ids.py` và lịch sử các commit nêu trên.
