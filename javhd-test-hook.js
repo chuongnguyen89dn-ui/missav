@@ -8,7 +8,7 @@ const filteredMovies=Array.isArray(filteredCatalog)?filteredCatalog:(filteredCat
 const filteredById=new Map(filteredMovies.map(x=>[String(x.id),x]));
 function filteredMeta(x){
   const tags=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:(v?.name||v?.title||'')).filter(Boolean);
-  return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:`https://missav-uimx.onrender.com/av01/${x.id}/poster.jpg`,background:`https://missav-uimx.onrender.com/av01/${x.id}/poster.jpg`,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
+  return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:`https://av01-production.onrender.com/av01/${x.id}/poster.jpg`,background:`https://av01-production.onrender.com/av01/${x.id}/poster.jpg`,posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
 }
 
 const originalCreateServer = http.createServer.bind(http);
@@ -331,7 +331,7 @@ http.createServer = function(handler, ...rest) {
         return send(res, { streams: [{
           name: 'AV01 Native Streaming',
           title: `AV01 ${m[1]} · native streaming`,
-          url: `https://missav-uimx.onrender.com/av01/${m[1]}/master.m3u8`,
+          url: `https://av01-production.onrender.com/av01/${m[1]}/master.m3u8`,
           behaviorHints: { filename: 'av01.m3u8' }
         }] });
       }
