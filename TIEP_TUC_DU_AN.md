@@ -614,3 +614,28 @@ Các code đầu tương ứng gồm `YUJ-074`, `NPJS-284`, `NPJS-278`, `CAWB-04
 Hai pipeline phải tiếp tục **song song**:
 1. Full scanner tiếp tục quét/verify/publish số lượng phim.
 2. Metadata/poster enrichment tiếp tục làm thông tin cho các ID từ chính catalog scanner.
+
+
+---
+
+# CẬP NHẬT 2026-10-08 — METADATA CHO TOÀN BỘ 2120 ID
+
+**Yêu cầu đã chốt:** Mỗi 20 phim metadata hoàn thành thì tự động commit/push GitHub một lần. **Chỉ khi chủ dự án yêu cầu mới đưa metadata lên add-on/Render.** Không tự deploy hoặc thay đổi manifest.
+
+- Script: `scripts/av01_enrich_catalog_ids.py`
+- Launcher watchdog: `SCAN-AV01-METADATA.cmd`
+- Đầu vào bất biến: `data/av01-catalog.json` (2120 phim ở thời điểm lập kế hoạch)
+- Checkpoint local: `av01_metadata_full/checkpoint.json`
+- Heartbeat local: `av01_metadata_full/heartbeat.json`
+- File publish metadata riêng: `data/av01-metadata-enriched.json`
+- Chạy trên Windows từ thư mục repo: `SCAN-AV01-METADATA.cmd`
+- Debug tối đa 20 ID (không push): `python scripts\\av01_enrich_catalog_ids.py --limit 20`
+- Chạy full và push mỗi 20 ID thành công: `python scripts\\av01_enrich_catalog_ids.py --publish`
+
+**Resume:** checkpoint lưu `done` theo ID và `pending` cho lỗi. Restart bỏ qua ID thành công, retry ID lỗi khi hết thời gian chờ. Checkpoint được ghi bằng file tạm rồi replace để tránh file JSON ghi dở. Heartbeat báo tiến độ. Watchdog thoát mã 75 nếu không có thành công mới trong 300 giây; launcher khởi động lại sau 15 giây. Lỗi metadata tạm thời retry sau 180–900 giây. Không xóa checkpoint.
+
+**Publish:** Khi có đủ 20 ID thành công mới kể từ mốc đã push, script tạo metadata-only JSON và `git add/commit/push` file này lên main. Mốc `published` chỉ tăng sau khi push thành công. Nếu mạng/GitHub lỗi, launcher restart và thử publish lại. Cần bảo đảm máy chạy có Git và quyền push. Dữ liệu HLS, token, playlist và catalog gốc không được ghi đè.
+
+**Giới hạn cần kiểm thử:** Mới cập nhật code, chưa có log chạy thật 20 phim để xác nhận HTML selectors và dữ liệu diễn viên/hãng. Cần test 20 ID đầu trước full run. Poster lấy từ og:image của AV01, chưa tái hiện đối chiếu DMM như bộ test cũ; không được tự tuyên bố 15/20 poster DMM với script mới. Script chưa tự động cập nhật add-on. Không khởi chạy workflow `.github/workflows/av01-scan.yml` vì workflow này có thể reset catalog.
+
+**Lưu ý:** Publish chỉ khi có `--publish`. Nếu chạy thử `--limit 20` thì chỉ tạo checkpoint và JSON local, không push. Sau khi kiểm tra chất lượng mới dùng launcher chạy full.
