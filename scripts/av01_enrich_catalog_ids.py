@@ -123,6 +123,7 @@ def main():
     ap.add_argument('--checkpoint',default='av01_metadata_full/checkpoint.json')
     ap.add_argument('--heartbeat',default='av01_metadata_full/heartbeat.json')
     ap.add_argument('--limit',type=int,default=0)
+    ap.add_argument('--restart-all',action='store_true',help='Start all catalog IDs from first, discarding old checkpoint progress')
     ap.add_argument('--delay',type=float,default=1.5)
     ap.add_argument('--publish',action='store_true',help='Commit/push every 20 newly completed IDs; never deploy')
     args=ap.parse_args()
@@ -136,8 +137,8 @@ def main():
     # One-time fresh scan: discard results from the previously unsuccessful run.
     # Persist the generation marker immediately so watchdog restarts resume progress.
     generation='av01-metadata-fresh-20261008'
-    if state.get('scan_generation') != generation:
-        print('AV01 METADATA: resetting previous unsuccessful checkpoint; starting at ID 1',flush=True)
+    if args.restart_all or state.get('scan_generation') != generation:
+        print('AV01 METADATA: starting fresh from first catalog ID',flush=True)
         state={'scan_generation':generation,'done':{},'pending':{},'published':0}
         atomic(cp,state)
     done=state.setdefault('done',{})
@@ -188,20 +189,20 @@ def main():
                     try:
                         code=movie_code(movie,{})
                         if not code:
-                            raise RuntimeError('movie code missing in catalog title')
-                        info={'movie_code':code,'poster':'','poster_status':'not_found'}
+                            print(f'MOVIE CODE MISSING {vid}; preserving catalog metadata',flush=True)
+                        info={'movie_code':code,'poster':'','poster_status':'not_found','catalog_title':movie.get('title','')}
                         # Preserve any previously verified cover before making new requests.
                         old=done.get(vid,{})
                         poster=old.get('poster') if old.get('poster_status','').startswith('verified') else ''
-                        poster=poster or dmm_cover(code)
+                        poster=poster or (dmm_cover(code) if code else '')
                         lib={}
-                        if not poster:
+                        if not poster and code:
                             lib=javlibrary_lookup(page,code)
                             poster=lib.get('poster','')
                         if not poster:
-                            raise RuntimeError('poster unavailable from DMM and JAVLibrary; retry later')
+                            print(f'POSTER NOT FOUND {vid} {code}; saving metadata without poster',flush=True)
                         info.update({'poster':poster,
-                                     'poster_status':'verified_javlibrary' if lib.get('poster') else 'verified_dmm'})
+                                     'poster_status':('verified_javlibrary' if lib.get('poster') else 'verified_dmm') if poster else 'not_found'})
                         if lib:
                             info.update({'javlibrary_url':lib.get('javlibrary_url',''),
                                          'javlibrary_metadata':{k:v for k,v in lib.items() if k not in ('poster','javlibrary_url')}})
