@@ -53,7 +53,7 @@ def verify_image(url):
 
 def dmm_cover(code):
     """Previously proven DMM image endpoint; no AV01 tags or JAVLibrary dependency."""
-    m=re.fullmatch(r'([A-Z]{2,8})-(\\d{2,6})',code,re.I)
+    m=re.fullmatch(r'([A-Z]{2,8})-(\d{2,6})',code,re.I)
     if not m:return ''
     stem=(m.group(1)+m.group(2)).lower()
     for suffix in ('pl.jpg','ps.jpg'):
