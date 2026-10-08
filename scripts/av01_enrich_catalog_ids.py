@@ -27,51 +27,71 @@ def extract(page):
         actresses:[...new Map(refs('actress').map(x=>[x.url.split('/actress/')[1]?.split('/')[0]||x.url,x])).values()],maker:refs('maker')[0]||null};
     }""")
 
-def dmm_poster(page, movie, info):
-    """Only accept a DMM/FANZA image when a search result explicitly matches the movie code."""
-    raw=(movie.get('code') or info.get('title') or movie.get('title') or '')
-    match=re.search(r'(?<![A-Za-z0-9])([A-Za-z]{2,8})[-_ ]?(\d{2,6})(?:-lada)?(?![A-Za-z0-9])',raw,re.I)
-    if not match:
-        return ''
-    code=(match.group(1)+'-'+match.group(2)).upper()
-    # First probe the proven DMM cover naming scheme (e.g. YUJ-074).
-    # Accept only actual image responses, never a guessed or broken URL.
-    stem=(match.group(1)+match.group(2)).lower()
-    for suffix in ('pl.jpg','ps.jpg'):
-        candidate=f'https://pics.dmm.co.jp/mono/movie/adult/{stem}/{stem}{suffix}'
-        try:
-            req=Request(candidate,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.dmm.co.jp/'})
-            with urlopen(req,timeout=12) as resp:
-                mime=resp.headers.get('Content-Type','').lower()
-                header=resp.read(16)
-                if resp.status==200 and mime.startswith('image/') and (header.startswith(bytes.fromhex('ffd8ff')) or header.startswith(bytes.fromhex('89504e47')) or header.startswith(b'RIFF')):
-                    print(f'POSTER VERIFIED {code} {candidate}',flush=True)
-                    return candidate
-        except Exception as exc:
-            print(f'POSTER PROBE {code} {suffix}: {type(exc).__name__}',flush=True)
+def movie_code(movie, info):
+    """Extract the product ID, never treat LADA/AV-DEBUT as a movie code."""
+    raw=' '.join(str(x or '') for x in (movie.get('title'),info.get('title'),movie.get('code')))
+    patterns=(r'FC2[-_ ]?PPV[-_ ]?(\\d{5,9})',r'(?<![A-Z0-9])([A-Z]{2,6})[-_ ]?(\\d{3,6})(?![A-Z0-9])')
+    for pat in patterns:
+        for match in re.finditer(pat,raw,re.I):
+            if pat.startswith('FC2'): return 'FC2-PPV-'+match.group(1)
+            prefix=match.group(1).upper()
+            if prefix not in {'LADA','AV','PPV','FC2'}:return prefix+'-'+match.group(2)
+    return ''
+
+def verify_image(url):
+    """Validate image response, not just a plausible-looking filename."""
+    if not url.startswith('https://'):return False
     try:
-        page.goto('https://www.dmm.co.jp/search/=/searchstr='+quote(code)+'/',wait_until='domcontentloaded',timeout=30000)
-        page.wait_for_timeout(1200)
-        result=page.evaluate(r"""code => {
-          const norm=s=>(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-          const want=norm(code);
-          const hits=[];
-          for(const a of document.querySelectorAll('a[href]')){
-            const href=a.href||'';
-            const title=(a.textContent||'')+' '+(a.querySelector('img')?.alt||'');
-            const img=a.querySelector('img');
-            if(!img || !href.includes('dmm.co.jp'))continue;
-            if(!new RegExp('(^|[^A-Z0-9])'+code.replace('-','[-_ ]?')+'([^A-Z0-9]|$)','i').test(title))continue;
-            const src=img.getAttribute('data-src')||img.currentSrc||img.src||'';
-            if(!src.startsWith('https://pics.dmm.co.jp/'))continue;
-            hits.push(src);
-          }
-          return hits[0]||'';
-        }""",code)
-        return result if result.startswith('https://') else ''
+        req=Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':'https://www.javlibrary.com/'})
+        with urlopen(req,timeout=12) as resp:
+            header=resp.read(16)
+            return resp.status==200 and resp.headers.get('Content-Type','').lower().startswith('image/') and (
+                header.startswith(bytes.fromhex('ffd8ff')) or header.startswith(bytes.fromhex('89504e47')) or header.startswith(b'RIFF'))
+    except Exception:
+        return False
+
+def javlibrary_lookup(page,code):
+    """Find an exact JAVLibrary ID, then take the poster URL from that movie page."""
+    if not code:return {}
+    search='https://www.javlibrary.com/en/vl_searchbyid.php?keyword='+quote(code)
+    try:
+        page.goto(search,wait_until='domcontentloaded',timeout=30000)
+        page.wait_for_timeout(800)
+        results=page.evaluate(r"""() => ({
+          direct:location.search.includes('v='),
+          id:document.querySelector('#video_id .text')?.textContent?.trim()||'',
+          links:[...document.querySelectorAll('div.video')].map(el=>({
+            id:el.querySelector('.id')?.textContent?.trim()||'',
+            href:el.querySelector('a[href]')?.href||''
+          }))
+        })""")
+        norm=lambda x:re.sub(r'[^A-Z0-9]','',x.upper())
+        if results['direct']:
+            if norm(results['id'])!=norm(code):return {}
+        else:
+            matches=[x for x in results['links'] if norm(x['id'])==norm(code)]
+            if not matches:return {}
+            page.goto(matches[0]['href'],wait_until='domcontentloaded',timeout=30000)
+        details=page.evaluate(r"""() => {
+          const t=s=>document.querySelector(s)?.textContent?.trim()||'';
+          const img=document.querySelector('#video_jacket_img');
+          return {code:t('#video_id .text'),title:t('#video_title'),
+            poster:img?.getAttribute('src')||'',
+            actresses:[...document.querySelectorAll('#video_cast .star')].map(x=>x.textContent.trim()).filter(Boolean),
+            genres:[...document.querySelectorAll('#video_genres .genre')].map(x=>x.textContent.trim()).filter(Boolean),
+            maker:t('#video_maker .text'),release_date:t('#video_date .text'),
+            javlibrary_url:location.href};
+        }""")
+        if norm(details.get('code',''))!=norm(code):return {}
+        from urllib.parse import urljoin
+        poster=urljoin(page.url,details.get('poster') or '')
+        if poster.endswith('ps.jpg'):poster=poster[:-6]+'pl.jpg'
+        details['poster']=poster if verify_image(poster) else ''
+        return details
     except Exception as exc:
-        print(f'POSTER DMM unavailable for {code}: {exc}',flush=True)
-        return ''
+        print(f'JAVLIBRARY RETRY {code}: {type(exc).__name__}: {exc}',flush=True)
+        return {}
+
 
 def git_publish(path, batch):
     rel=str(path.relative_to(ROOT))
@@ -152,17 +172,25 @@ def main():
                     vid=str(movie['id'])
                     if args.limit and processed>=args.limit:break
                     try:
-                        page.goto(movie.get('url') or f'https://www.av01.media/en/video/{vid}',wait_until='domcontentloaded',timeout=30000)
-                        info={}
-                        for _ in range(12):
-                            info=extract(page)
-                            if info['official_tags']:break
-                            page.wait_for_timeout(500)
-                        if not info['official_tags']:raise RuntimeError('official tags not hydrated')
-                        info['poster']=dmm_poster(page,movie,info)
-                        if not info['poster']:
-                            raise RuntimeError('DMM poster not verified; metadata not marked complete')
-                        info['poster_status']='verified_dmm' if info['poster'] else 'not_found'
+                        code=movie_code(movie,{})
+                        if not code:
+                            raise RuntimeError('movie code missing in catalog title')
+                        info={'movie_code':code,'poster':'','poster_status':'not_found'}
+                        lib=javlibrary_lookup(page,code)
+                        if not lib.get('poster'):
+                            raise RuntimeError('JAVLibrary exact match/verified poster unavailable')
+                        info.update({'poster':lib['poster'],'poster_status':'verified_javlibrary',
+                                     'javlibrary_url':lib['javlibrary_url'],
+                                     'javlibrary_metadata':{k:v for k,v in lib.items() if k not in ('poster','javlibrary_url')}})
+                        # Poster is independent of AV01 tags. AV01 is optional enrichment.
+                        try:
+                            page.goto(movie.get('url') or f'https://www.av01.media/en/video/{vid}',wait_until='domcontentloaded',timeout=15000)
+                            av=extract(page)
+                            info.update({k:v for k,v in av.items() if k!='poster'})
+                            info['av01_tags_status']='ok' if av.get('official_tags') else 'missing'
+                        except Exception as exc:
+                            info['av01_tags_status']='unavailable'
+                            print(f'AV01 OPTIONAL {vid}: {type(exc).__name__}',flush=True)
                         done[vid]=info
                         pending.pop(vid,None)
                         last_progress=time.time()
