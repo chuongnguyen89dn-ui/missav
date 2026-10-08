@@ -50,6 +50,20 @@ def verify_image(url):
     except Exception:
         return False
 
+
+def dmm_cover(code):
+    """Previously proven DMM image endpoint; no AV01 tags or JAVLibrary dependency."""
+    m=re.fullmatch(r'([A-Z]{2,8})-(\\d{2,6})',code,re.I)
+    if not m:return ''
+    stem=(m.group(1)+m.group(2)).lower()
+    for suffix in ('pl.jpg','ps.jpg'):
+        url=f'https://pics.dmm.co.jp/mono/movie/adult/{stem}/{stem}{suffix}'
+        if verify_image(url):
+            print(f'POSTER VERIFIED DMM {code} {url}',flush=True)
+            return url
+    return ''
+
+
 def javlibrary_lookup(page,code):
     """Find an exact JAVLibrary ID, then take the poster URL from that movie page."""
     if not code:return {}
@@ -176,12 +190,21 @@ def main():
                         if not code:
                             raise RuntimeError('movie code missing in catalog title')
                         info={'movie_code':code,'poster':'','poster_status':'not_found'}
-                        lib=javlibrary_lookup(page,code)
-                        if not lib.get('poster'):
-                            raise RuntimeError('JAVLibrary exact match/verified poster unavailable')
-                        info.update({'poster':lib['poster'],'poster_status':'verified_javlibrary',
-                                     'javlibrary_url':lib['javlibrary_url'],
-                                     'javlibrary_metadata':{k:v for k,v in lib.items() if k not in ('poster','javlibrary_url')}})
+                        # Preserve any previously verified cover before making new requests.
+                        old=done.get(vid,{})
+                        poster=old.get('poster') if old.get('poster_status','').startswith('verified') else ''
+                        poster=poster or dmm_cover(code)
+                        lib={}
+                        if not poster:
+                            lib=javlibrary_lookup(page,code)
+                            poster=lib.get('poster','')
+                        if not poster:
+                            raise RuntimeError('poster unavailable from DMM and JAVLibrary; retry later')
+                        info.update({'poster':poster,
+                                     'poster_status':'verified_javlibrary' if lib.get('poster') else 'verified_dmm'})
+                        if lib:
+                            info.update({'javlibrary_url':lib.get('javlibrary_url',''),
+                                         'javlibrary_metadata':{k:v for k,v in lib.items() if k not in ('poster','javlibrary_url')}})
                         # Poster is independent of AV01 tags. AV01 is optional enrichment.
                         try:
                             page.goto(movie.get('url') or f'https://www.av01.media/en/video/{vid}',wait_until='domcontentloaded',timeout=15000)
