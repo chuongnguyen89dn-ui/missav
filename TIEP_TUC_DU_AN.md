@@ -806,3 +806,11 @@ Không được tuyên bố script metadata bị mất nếu chưa kiểm tra `s
 - Các mẫu thuộc 137 bản ghi có tiêu đề mặc định: AV01 220428, 220908, 220427, 221249, 220158. Người dùng nói một phim mẫu có mã HMN-904, nhưng dữ liệu GitHub gắn HMN-904 và poster `https://pics.dmm.co.jp/mono/movie/adult/hmn904/hmn904pl.jpg` cho AV01 220392, còn 220428 đang trống; cần đối chiếu trang AV01 để tránh gán nhầm hai ID.
 - Hai trường hợp đường dẫn DMM có tiền tố đặc biệt khác: KV-329: `h_955kv329/h_955kv329pl.jpg`; JERA-052: `1jera052/1jera052pl.jpg`. Không áp dụng quy luật MURIKURI cho tất cả phim.
 - KIẾN TRÚC: scanner link/HLS và scanner metadata/poster là hai luồng riêng, không được trộn. Metadata chạy theo `data/av01-catalog.json`, checkpoint `av01_metadata_full/checkpoint.json`, xuất `data/av01-metadata-enriched.json`; có thể chạy `python scripts\\av01_enrich_catalog_ids.py --publish` khi được yêu cầu. Không dùng `--restart-all` khi muốn giữ checkpoint. Không tự deploy add-on khi chỉ yêu cầu cập nhật metadata.
+
+
+### 2026-10-08 — Bốn poster trắng người dùng xác nhận
+- NACT-194, AV01 221405: metadata ghi `movie_code=NACT-194`, `poster=https://pics.dmm.co.jp/mono/movie/adult/nact194/nact194pl.jpg`, `poster_status=verified_dmm`; người dùng báo poster trắng. Chưa tìm được URL thay thế đáng tin cậy.
+- THZA-10, AV01 221440: `catalog_title` bắt đầu `THZA-10`, nhưng `movie_code` bị nhận sai thành `VOL-110` từ chuỗi `Vol.110` trong tiêu đề; poster hiện `/vol110/vol110pl.jpg` và bị đánh dấu `verified_dmm`. Cần ưu tiên mã ở đầu catalog_title, tránh lấy mã giả từ mô tả; xác minh poster THZA-10 riêng.
+- JERA-052, AV01 221308: poster lưu sai `/jera052/jera052pl.jpg`; đường dẫn đúng người dùng cung cấp trước đó `/1jera052/1jera052pl.jpg`.
+- KV-329, AV01 221419: poster lưu sai `/kv329/kv329pl.jpg`; đường dẫn đúng người dùng cung cấp trước đó `/h_955kv329/h_955kv329pl.jpg`.
+- Không thể coi HTTP 200 và image/jpeg là xác minh poster thật; `verified_dmm` hiện chứa false positives. Phải xác minh nội dung ảnh, tìm nguồn đúng và cập nhật metadata. Tránh áp dụng một tiền tố cho tất cả các mã. Chưa xác nhận sửa trực tuyến 4 poster này.
