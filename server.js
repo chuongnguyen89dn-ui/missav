@@ -9,6 +9,22 @@ let catalog={movies:[]};
 try{catalog=JSON.parse(readFileSync(new URL('./data/av01-catalog.json',import.meta.url),'utf8'));}catch{}
 let movies=Array.isArray(catalog)?catalog:(catalog.movies||[]);
 
+// Enrich by stable AV01 ID without changing the original catalog ordering.
+let metadata={movies:[]};
+try{metadata=JSON.parse(readFileSync(new URL('./data/av01-metadata-enriched.json',import.meta.url),'utf8'));}catch{}
+const metadataById=new Map((metadata.movies||[]).map(item=>[String(item.id),item]));
+movies=movies.map(item=>{
+  const extra=metadataById.get(String(item.id));
+  if(!extra)return item;
+  const merged={...item};
+  for(const key of ['title','description','poster','official_tags','actresses','maker','release_date']){
+    const value=extra[key];
+    if(value && (!Array.isArray(value)||value.length))merged[key]=value;
+  }
+  if(extra.movie_code)merged.dvd_id=extra.movie_code;
+  return merged;
+});
+
 const byId=new Map(movies.map(x=>['av01:'+String(x.id),x]));
 
 function meta(x){
