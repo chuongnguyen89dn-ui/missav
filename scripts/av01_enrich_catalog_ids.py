@@ -83,6 +83,13 @@ def main():
     print(f'AV01 METADATA catalog IDs: {len(movies)}',flush=True)
     cp,out,hb=map(resolve,(args.checkpoint,args.out,args.heartbeat))
     state=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {'done':{},'pending':{},'published':0}
+    # One-time fresh scan: discard results from the previously unsuccessful run.
+    # Persist the generation marker immediately so watchdog restarts resume progress.
+    generation='av01-metadata-fresh-20261008'
+    if state.get('scan_generation') != generation:
+        print('AV01 METADATA: resetting previous unsuccessful checkpoint; starting at ID 1',flush=True)
+        state={'scan_generation':generation,'done':{},'pending':{},'published':0}
+        atomic(cp,state)
     done=state.setdefault('done',{})
     pending=state.setdefault('pending',{})
     # Follow the current filtered catalog only; never restore excluded movies.
