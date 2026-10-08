@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """AV01 metadata enrichment: resumable, GitHub publish every 20 successes, no addon deploy."""
-import argparse, json, os, subprocess, time
+import argparse, json, os, re, subprocess, time
+from urllib.parse import quote
 from datetime import datetime, timezone
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -20,10 +21,41 @@ def extract(page):
         .map(a=>({name:text(a),url:a.href})).filter(x=>x.name);
       const tags=refs('tag').map(x=>({...x,id:(x.url.match(/\/tag\/(\d+)/)||[])[1]||''}));
       const og=n=>document.querySelector('meta[property="'+n+'"]')?.content||'';
-      return {title:og('og:title'),description:og('og:description'),poster:og('og:image'),
+      return {title:og('og:title'),description:og('og:description'),poster:'',
         official_tags:[...new Set(tags.map(x=>x.name))],official_tag_refs:tags,
-        actresses:refs('actress'),maker:refs('maker')[0]||null};
+        actresses:[...new Map(refs('actress').map(x=>[x.url.split('/actress/')[1]?.split('/')[0]||x.url,x])).values()],maker:refs('maker')[0]||null};
     }""")
+
+def dmm_poster(page, movie, info):
+    """Only accept a DMM/FANZA image when a search result explicitly matches the movie code."""
+    raw=(movie.get('code') or info.get('title') or movie.get('title') or '')
+    match=re.search(r'(?<![A-Za-z0-9])([A-Za-z]{2,8})[-_ ]?(\\d{2,6})(?:-lada)?(?![A-Za-z0-9])',raw,re.I)
+    if not match:
+        return ''
+    code=(match.group(1)+'-'+match.group(2)).upper()
+    try:
+        page.goto('https://www.dmm.co.jp/search/=/searchstr='+quote(code)+'/',wait_until='domcontentloaded',timeout=30000)
+        page.wait_for_timeout(1200)
+        result=page.evaluate(r"""code => {
+          const norm=s=>(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+          const want=norm(code);
+          const hits=[];
+          for(const a of document.querySelectorAll('a[href]')){
+            const href=a.href||'';
+            const title=(a.textContent||'')+' '+(a.querySelector('img')?.alt||'');
+            const img=a.querySelector('img');
+            if(!img || !/dmm\\.co\\.jp|digital\\.dmm\\.co\\.jp/.test(href))continue;
+            if(!new RegExp('(^|[^A-Z0-9])'+code.replace('-','[-_ ]?')+'([^A-Z0-9]|$)','i').test(title))continue;
+            const src=img.getAttribute('data-src')||img.currentSrc||img.src||'';
+            if(!/^https:\\/\\/[^/]*pics\\.dmm\\.co\\.jp\\//i.test(src))continue;
+            hits.push(src);
+          }
+          return hits[0]||'';
+        }""",code)
+        return result if result.startswith('https://') else ''
+    except Exception as exc:
+        print(f'POSTER DMM unavailable for {code}: {exc}',flush=True)
+        return ''
 
 def git_publish(path, batch):
     rel=str(path.relative_to(ROOT))
@@ -94,6 +126,7 @@ def main():
                             if info['official_tags']:break
                             page.wait_for_timeout(500)
                         if not info['official_tags']:raise RuntimeError('official tags not hydrated')
+                        info['poster']=dmm_poster(page,movie,info)
                         done[vid]=info
                         pending.pop(vid,None)
                         last_progress=time.time()
