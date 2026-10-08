@@ -29,7 +29,7 @@ def extract(page):
 def dmm_poster(page, movie, info):
     """Only accept a DMM/FANZA image when a search result explicitly matches the movie code."""
     raw=(movie.get('code') or info.get('title') or movie.get('title') or '')
-    match=re.search(r'(?<![A-Za-z0-9])([A-Za-z]{2,8})[-_ ]?(\\d{2,6})(?:-lada)?(?![A-Za-z0-9])',raw,re.I)
+    match=re.search(r'(?<![A-Za-z0-9])([A-Za-z]{2,8})[-_ ]?(\d{2,6})(?:-lada)?(?![A-Za-z0-9])',raw,re.I)
     if not match:
         return ''
     code=(match.group(1)+'-'+match.group(2)).upper()
