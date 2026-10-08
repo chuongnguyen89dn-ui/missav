@@ -83,7 +83,13 @@ def main():
     state=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {'done':{},'pending':{},'published':0}
     done=state.setdefault('done',{})
     pending=state.setdefault('pending',{})
-    state.setdefault('published',0)
+    # Follow the current filtered catalog only; never restore excluded movies.
+    valid_ids={str(m['id']) for m in movies}
+    for vid in list(done):
+        if vid not in valid_ids: del done[vid]
+    for vid in list(pending):
+        if vid not in valid_ids: del pending[vid]
+    state['published']=min(state.get('published',0),len(done))
     processed=0
     last_progress=time.time()
     def save():
