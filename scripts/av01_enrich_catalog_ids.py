@@ -86,7 +86,9 @@ def main():
     # Follow the current filtered catalog only; never restore excluded movies.
     valid_ids={str(m['id']) for m in movies}
     for vid in list(done):
-        if vid not in valid_ids: del done[vid]
+        # A record without a verified poster is incomplete and must be rescanned.
+        if vid not in valid_ids or not str(done[vid].get('poster') or '').strip():
+            del done[vid]
     for vid in list(pending):
         if vid not in valid_ids: del pending[vid]
     state['published']=min(state.get('published',0),len(done))
