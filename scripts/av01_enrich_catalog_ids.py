@@ -17,7 +17,7 @@ def extract(page):
     return page.evaluate(r"""() => {
       const text=e=>(e?.textContent||'').trim();
       const links=[...document.querySelectorAll('a[href]')];
-      const refs=kind=>links.filter(a=>new RegExp('/(?:en|vn|ja|zh(?:-cn|-tw)?)/'+kind+'/\\d+(?:/|$)','i').test(new URL(a.href).pathname))
+      const refs=kind=>links.filter(a=>new RegExp('/(?:en|vn|ja|zh(?:-cn|-tw)?)/'+kind+'/[0-9]+(?:/|$)','i').test(new URL(a.href).pathname))
         .map(a=>({name:text(a),url:a.href})).filter(x=>x.name);
       const tags=refs('tag').map(x=>({...x,id:(x.url.match(/\/tag\/(\d+)/)||[])[1]||''}));
       const og=n=>document.querySelector('meta[property="'+n+'"]')?.content||'';
@@ -44,10 +44,10 @@ def dmm_poster(page, movie, info):
             const href=a.href||'';
             const title=(a.textContent||'')+' '+(a.querySelector('img')?.alt||'');
             const img=a.querySelector('img');
-            if(!img || !/dmm\\.co\\.jp|digital\\.dmm\\.co\\.jp/.test(href))continue;
+            if(!img || !href.includes('dmm.co.jp'))continue;
             if(!new RegExp('(^|[^A-Z0-9])'+code.replace('-','[-_ ]?')+'([^A-Z0-9]|$)','i').test(title))continue;
             const src=img.getAttribute('data-src')||img.currentSrc||img.src||'';
-            if(!/^https:\\/\\/[^/]*pics\\.dmm\\.co\\.jp\\//i.test(src))continue;
+            if(!src.startsWith('https://pics.dmm.co.jp/'))continue;
             hits.push(src);
           }
           return hits[0]||'';
@@ -79,6 +79,8 @@ def main():
     resolve=lambda x:(ROOT/x).resolve()
     catalog=json.loads(resolve(args.catalog).read_text(encoding='utf-8'))
     movies=catalog if isinstance(catalog,list) else catalog['movies']
+    movies=list({str(m['id']):m for m in movies if m.get('id') is not None}.values())
+    print(f'AV01 METADATA catalog IDs: {len(movies)}',flush=True)
     cp,out,hb=map(resolve,(args.checkpoint,args.out,args.heartbeat))
     state=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {'done':{},'pending':{},'published':0}
     done=state.setdefault('done',{})
@@ -86,8 +88,8 @@ def main():
     # Follow the current filtered catalog only; never restore excluded movies.
     valid_ids={str(m['id']) for m in movies}
     for vid in list(done):
-        # A record without a verified poster is incomplete and must be rescanned.
-        if vid not in valid_ids or not str(done[vid].get('poster') or '').strip():
+        # Metadata remains complete even when DMM has no verified poster.
+        if vid not in valid_ids:
             del done[vid]
     for vid in list(pending):
         if vid not in valid_ids: del pending[vid]
@@ -135,10 +137,11 @@ def main():
                             page.wait_for_timeout(500)
                         if not info['official_tags']:raise RuntimeError('official tags not hydrated')
                         info['poster']=dmm_poster(page,movie,info)
+                        info['poster_status']='verified_dmm' if info['poster'] else 'not_found'
                         done[vid]=info
                         pending.pop(vid,None)
                         last_progress=time.time()
-                        print(f'META OK {vid} {len(done)}/{len(movies)}',flush=True)
+                        print(f'META OK {vid} {len(done)}/{len(movies)} poster={info["poster_status"]}',flush=True)
                     except Exception as e:
                         prior=pending.get(vid,{})
                         attempts=prior.get('attempts',0)+1
@@ -154,6 +157,11 @@ def main():
                 if args.limit and processed>=args.limit:break
         finally:
             output();save();status();browser.close()
+    # Publish the last partial batch too, after the full catalog has completed.
+    if args.publish and not args.limit and len(done)==len(movies) and len(done)>state['published']:
+        git_publish(out,len(done))
+        state['published']=len(done)
+        save();status()
     print(f'FINISHED total={len(movies)} ok={len(done)} pending={len(pending)} published={state["published"]}',flush=True)
 
 if __name__=='__main__':main()
