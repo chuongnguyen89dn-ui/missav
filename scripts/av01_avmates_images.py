@@ -41,14 +41,17 @@ def extract(html,expected=None):
     if expected and page_code!=normalize(expected):
         raise ValueError('code_mismatch: expected %s, page %s'%(expected,page_code))
     if not page_code:raise ValueError('missing_page_code')
-    prefix=re.sub(r'[^a-z0-9]','',page_code.lower())
+    code_match=CODE.search(page_code)
+    letters=code_match.group(1).lower()
+    number=int(code_match.group(2))
     imgs=[]
     def add(src,origin):
         u=image_url(src)
         if not u:return
         base=urlparse(u).path.rsplit('/',1)[-1].lower()
         # Match film code in image filename; excludes recommendations, ads and logos.
-        if not base.startswith(prefix):return
+        m=re.match(r'^([a-z]+)0*(\\d+)',base)
+        if not m or m.group(1)!=letters or int(m.group(2))!=number:return
         if u not in [i['url'] for i in imgs]:imgs.append({'url':u,'origin':origin})
     for meta in soup.select('meta[property="og:image"],meta[name="twitter:image"]'):
         add(meta.get('content'),'social_meta')
