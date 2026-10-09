@@ -75,73 +75,112 @@ def scan(movie,max_snap,timeout,workers):
             'complete_gallery_verified':False,'max_snapshot_index':max_snap,
             'probed_urls':len(urls),'errors':errors},None
 def main():
+    from datetime import datetime,timezone
     p=argparse.ArgumentParser()
     p.add_argument('--catalog',default='data/av01-catalog.json')
     p.add_argument('--output',default='data/av01-avmates-cdn-images.json')
     p.add_argument('--checkpoint',default='av01_avmates_cdn/checkpoint.json')
-    p.add_argument('--limit',type=int,default=20)
+    p.add_argument('--heartbeat',default='av01_avmates_cdn/heartbeat.json')
+    p.add_argument('--limit',type=int,default=0)
     p.add_argument('--max-snap',type=int,default=30)
     p.add_argument('--workers',type=int,default=4)
     p.add_argument('--timeout',type=float,default=12)
     p.add_argument('--delay',type=float,default=1)
     p.add_argument('--reset',action='store_true')
-    p.add_argument('--batch-size',type=int,default=0,help='Maximum new movie IDs per invocation; 0=all')
-    p.add_argument('--no-publish',action='store_true',help='Let GitHub Actions publish output instead')
-    p.add_argument('--publish-every',type=int,default=25,help='Commit and push checkpoint/results every N processed movies; 0 disables')
+    p.add_argument('--publish-every',type=int,default=20)
     a=p.parse_args()
     if not 1<=a.max_snap<=100 or not 1<=a.workers<=8:p.error('max-snap 1..100, workers 1..8')
     raw=json.loads((ROOT/a.catalog).read_text(encoding='utf-8'))
-    movies=raw if isinstance(raw,list) else raw.get('movies',[])
-    cp,out=ROOT/a.checkpoint,ROOT/a.output
-    state={'completed':{},'pending':{},'skipped':{}}
-    if cp.exists() and not a.reset:state=json.loads(cp.read_text(encoding='utf-8'))
-    for field in ('completed','pending','skipped'):state.setdefault(field,{})
-    valid={str(m.get('id')) for m in movies}
-    for field in ('completed','pending','skipped'):
-        for key in list(state[field]):
-            if key not in valid:del state[field][key]
-    for movie in movies:
-        key=str(movie.get('id'))
-        if excluded(movie):
-            state['completed'].pop(key,None)
-            state['pending'].pop(key,None)
-            state['skipped'][key]={'id':movie.get('id'),'code':code_of(movie),'status':'skipped_excluded_code'}
-    state.setdefault('skipped',{})
-    processed=0
-    for movie in (movies[:a.limit] if a.limit else movies):
-        code=code_of(movie);key=str(movie.get('id') or code or '')
-        if key in state['completed'] or key in state['skipped']:continue
-        if a.batch_size and processed>=a.batch_size:break
-        if excluded(movie):
-            state['skipped'][key]={'id':movie.get('id'),'code':code,'status':'skipped_excluded_code'}
-            state['pending'].pop(key,None)
-            print('SKIPPED_EXCLUDED',key,code,flush=True)
-            save(cp,state)
-            save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
-            processed+=1
-            if not a.no_publish and a.publish_every and processed%a.publish_every==0:publish([cp,out])
-            continue
-        result,error=scan(movie,a.max_snap,a.timeout,a.workers)
-        if error:
-            state['pending'][key]=error
-            print('PENDING',key,error,flush=True)
-        else:
-            if result['status']=='skipped_excluded_code':
-                state['skipped'][key]=result
-                state['pending'].pop(key,None)
-            elif result['status']=='ok':
-                state['completed'][key]=result
-                state['pending'].pop(key,None)
-            else:state['pending'][key]=result
-            print(result['status'].upper(),code,'poster=',bool(result['poster']),
-                  'snapshots=',result['snapshot_count'],'errors=',result['errors'],flush=True)
+    source=raw if isinstance(raw,list) else raw.get('movies',[])
+    movies=list({str(m['id']):m for m in source if m.get('id') is not None}.values())
+    cp,out,hb=ROOT/a.checkpoint,ROOT/a.output,ROOT/a.heartbeat
+    generation='avmates-full-catalog-first-id-20261009'
+    state=json.loads(cp.read_text(encoding='utf-8')) if cp.exists() else {}
+    if a.reset or state.get('scan_generation')!=generation:
+        print('AVMATES FRESH START: first ID in GitHub catalog order',flush=True)
+        state={'scan_generation':generation,'completed':{},'pending':{},'skipped':{},'published':0}
         save(cp,state)
-        save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
-        processed+=1
-        if a.publish_every and processed%a.publish_every==0:publish([cp,out])
-        time.sleep(max(0,a.delay))
-    save(cp,state)
-    save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
-    if not a.no_publish and a.publish_every and processed:publish([cp,out])
-    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']),'processed_this_run=',processed,'total_catalog=',len(movies),flush=True)
+    done=state.setdefault('completed',{})
+    pending=state.setdefault('pending',{})
+    skipped=state.setdefault('skipped',{})
+    state.setdefault('published',0)
+    valid={str(m['id']) for m in movies}
+    for group in (done,pending,skipped):
+        for key in list(group):
+            if key not in valid:del group[key]
+    # Exclusions are not successful posters and do not count toward publication batches.
+    for movie in movies:
+        key=str(movie['id'])
+        if excluded(movie):
+            done.pop(key,None);pending.pop(key,None)
+            skipped[key]={'id':movie['id'],'code':code_of(movie),'status':'skipped_excluded_code'}
+    state['published']=min(state['published'],len(done))
+    def output():
+        save(out,{'count':len(done),'movies':[done[str(m['id'])] for m in movies if str(m['id']) in done],
+                  'pending':pending,'skipped':skipped})
+    def heartbeat():
+        save(hb,{'ts':datetime.now(timezone.utc).isoformat(),'total':len(movies),
+                 'complete':len(done),'pending':len(pending),'skipped':len(skipped),
+                 'published':state['published']})
+    def persist():
+        save(cp,state);output();heartbeat()
+    def publish_ready(force=False):
+        # DMM rule: publish only after 20 NEW verified successes, not 20 attempts.
+        if len(done)-state['published']<a.publish_every and not force:return
+        output()
+        publish([out])
+        state['published']=len(done)
+        save(cp,state);heartbeat()
+    persist()
+    processed=0
+    last_progress=time.time()
+    while True:
+        candidates=[m for m in movies if str(m['id']) not in done and
+                    str(m['id']) not in skipped and
+                    pending.get(str(m['id']),{}).get('retry_after',0)<=time.time()]
+        if not candidates:
+            if len(done)+len(skipped)==len(movies):break
+            next_retry=min((v.get('retry_after',time.time()+30) for v in pending.values()
+                            if isinstance(v,dict)),default=time.time()+30)
+            heartbeat();time.sleep(min(30,max(1,next_retry-time.time())))
+            continue
+        for movie in candidates:
+            if a.limit and processed>=a.limit:break
+            key=str(movie['id']);code=code_of(movie)
+            try:
+                result,error=scan(movie,a.max_snap,a.timeout,a.workers)
+                if error:raise ValueError(error)
+                if result['status']=='ok':
+                    done[key]=result;pending.pop(key,None)
+                    last_progress=time.time()
+                    print('OK',key,code,'poster=',True,'snapshots=',result['snapshot_count'],
+                          'verified=',len(done),'/',len(movies),flush=True)
+                else:
+                    # Preserve partial results and retry with DMM exponential cooldown.
+                    prior=pending.get(key,{})
+                    attempts=prior.get('attempts',0)+1
+                    wait=min(900,180*(2**min(attempts-1,3)))
+                    pending[key]={'attempts':attempts,'retry_after':time.time()+wait,
+                                  'reason':result['status'],'result':result}
+                    print('RETRY',key,code,'status=',result['status'],'after=',wait,flush=True)
+            except Exception as exc:
+                prior=pending.get(key,{})
+                attempts=prior.get('attempts',0)+1
+                wait=min(900,180*(2**min(attempts-1,3)))
+                pending[key]={'attempts':attempts,'retry_after':time.time()+wait,
+                              'reason':str(exc)[:200]}
+                print('RETRY',key,code,type(exc).__name__,'after=',wait,flush=True)
+            persist()
+            publish_ready()
+            processed+=1
+            if time.time()-last_progress>300:
+                print('WATCHDOG: no verified progress for 300s; restart via CMD',flush=True)
+                raise SystemExit(75)
+            time.sleep(max(0,a.delay))
+        if a.limit and processed>=a.limit:break
+    persist()
+    if not a.limit and len(done)+len(skipped)==len(movies) and len(done)>state['published']:
+        publish_ready(force=True)
+    print('DONE verified=',len(done),'pending=',len(pending),'skipped=',len(skipped),
+          'published=',state['published'],'total_catalog=',len(movies),flush=True)
 if __name__=='__main__':main()
