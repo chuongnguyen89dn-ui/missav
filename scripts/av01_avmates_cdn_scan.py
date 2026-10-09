@@ -128,9 +128,15 @@ def main():
         # DMM rule: publish only after 20 NEW verified successes, not 20 attempts.
         if len(done)-state['published']<a.publish_every and not force:return
         output()
-        publish([out])
+        old_published=state['published']
         state['published']=len(done)
         save(cp,state);heartbeat()
+        try:
+            publish([out,cp,hb])
+        except Exception:
+            state['published']=old_published
+            save(cp,state);heartbeat()
+            raise
     persist()
     processed=0
     last_progress=time.time()
