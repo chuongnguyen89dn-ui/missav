@@ -53,7 +53,7 @@ function meta(x){
   // These entries are image-only and must never resolve to a playback stream.
   const images=imageById.get(String(x.id))?.snapshots||[];
   if(images.length){
-    const released=/^\\d{4}-\\d{2}-\\d{2}/.test(String(date))?String(date).slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
+    const released=/^\d{4}-\d{2}-\d{2}/.test(String(date))?String(date).slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
     m.videos=images.map((thumbnail,i)=>({
       id:'av01:'+x.id+':image:'+(i+1),title:'Snap '+(i+1),
       released,season:1,episode:i+1,thumbnail,available:true
@@ -96,7 +96,7 @@ http.createServer(async(req,res)=>{
   }
   if(path.startsWith('/stream/movie/av01:')&&path.endsWith('.json')){
     const requested=path.slice('/stream/movie/'.length,-5);
-    if(/:image:\\d+$/.test(requested))return json(res,{streams:[]});
+    if(/:image:\d+$/.test(requested))return json(res,{streams:[]});
     const x=byId.get(requested);
     return x?json(res,{streams:[{name:'AV01 1080p',title:'AV01 source',externalUrl:x.page_url||('https://www.av01.media/en/video/'+x.id)}]}):json(res,{streams:[]});
   }
