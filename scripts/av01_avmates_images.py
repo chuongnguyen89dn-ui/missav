@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AVMates image collector. Isolated output; never modifies active AV01 catalog/streams.
 Usage:
-  pip install requests beautifulsoup4
+  pip install playwright beautifulsoup4\n  python -m playwright install chromium
   python scripts/av01_avmates_images.py --html "saved-page.html"
   python scripts/av01_avmates_images.py --catalog data/av01-catalog.json --limit 20
 Only an exact movie-code match is accepted. Unreachable pages are pending, not fabricated.
@@ -9,8 +9,8 @@ Only an exact movie-code match is accepted. Unreachable pages are pending, not f
 import argparse, json, os, re, time
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, quote
-import requests
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 ROOT=Path(__file__).resolve().parent.parent
 CODE=re.compile(r'(?<![A-Z0-9])([A-Z]{2,10})[-_ ]?(\d{2,6})(?![A-Z0-9])',re.I)
@@ -85,14 +85,18 @@ def extract(html,expected=None):
             'poster':poster,'snapshots':[i['url'] for i in imgs if i['url']!=poster],
             'image_count':len(imgs),'status':'extracted_unverified' if poster else 'poster_missing'}
 
-def search_page(session,code):
-    # WordPress public search; do not synthesize numeric post IDs.
-    api='https://avmates.com/wp-json/wp/v2/search'
-    r=session.get(api,params={'search':code,'per_page':20},timeout=25)
-    r.raise_for_status()
-    for item in r.json():
-        link=item.get('url','')
-        if normalize(urlparse(link).path)==normalize(code) or normalize(link.rsplit('/',2)[-2])==normalize(code):
+def search_page(page,code):
+    # Search the visible website, not the blocked wp-json API.
+    page.goto('https://avmates.com/?s='+quote(code),wait_until='domcontentloaded',timeout=45000)
+    page.wait_for_timeout(1200)
+    if 'just a moment' in page.title().lower():
+        print('Browser verification requested; complete it in Chromium.',flush=True)
+        input('Press Enter after the page is accessible...')
+    candidates=page.locator('a[href*="avmates.com/"]').evaluate_all(
+        """els => els.map(a=>a.href).filter(Boolean)""")
+    for link in candidates:
+        parts=[p for p in urlparse(link).path.split('/') if p]
+        if any(normalize(p)==normalize(code) for p in parts):
             return link
     return ''
 
@@ -105,6 +109,7 @@ def main():
     ap.add_argument('--limit',type=int,default=20)
     ap.add_argument('--delay',type=float,default=2)
     ap.add_argument('--reset',action='store_true')
+    ap.add_argument('--profile',default='av01_avmates_scan/chromium_profile')
     args=ap.parse_args()
     out=ROOT/args.output;cp=ROOT/args.checkpoint
     state={'completed':{},'pending':{}}
@@ -117,29 +122,38 @@ def main():
     else:
         catalog=json.loads((ROOT/args.catalog).read_text(encoding='utf-8'))
         movies=catalog if isinstance(catalog,list) else catalog.get('movies',[])
-        session=requests.Session()
-        session.headers.update({'User-Agent':'Mozilla/5.0 (compatible; AV01ImageCollector/1.0)'})
         processed=0
-        for movie in movies:
-            code=normalize(movie.get('code') or movie.get('dvd_id') or movie.get('title'))
-            if not code:continue
-            if code in state['completed']:continue
-            if args.limit and processed>=args.limit:break
-            processed+=1
+        with sync_playwright() as pw:
+            context=pw.chromium.launch_persistent_context(
+                user_data_dir=str(ROOT/args.profile),headless=False,
+                viewport={'width':1280,'height':900})
+            page=context.new_page()
             try:
-                url=search_page(session,code)
-                if not url:raise ValueError('no_exact_search_result')
-                r=session.get(url,timeout=25);r.raise_for_status()
-                item=extract(r.text,code)
-                if not item['poster']:raise ValueError('poster_missing')
-                item['av01_id']=movie.get('id')
-                state['completed'][code]=item
-                state['pending'].pop(code,None)
-                print('OK',code,'snapshots',len(item['snapshots']),flush=True)
-            except Exception as e:
-                state['pending'][code]=str(e)[:200]
-                print('PENDING',code,str(e)[:120],flush=True)
-            save(cp,state)
+                for movie in movies:
+                    code=normalize(movie.get('code') or movie.get('dvd_id') or movie.get('title'))
+                    if not code:continue
+                    if code in state['completed']:continue
+                    if args.limit and processed>=args.limit:break
+                    processed+=1
+                    try:
+                        url=search_page(page,code)
+                        if not url:raise ValueError('no_exact_search_result')
+                        page.goto(url,wait_until='domcontentloaded',timeout=45000)
+                        item=extract(page.content(),code)
+                        if not item['poster']:raise ValueError('poster_missing')
+                        item['av01_id']=movie.get('id')
+                        state['completed'][code]=item
+                        state['pending'].pop(code,None)
+                        print('OK',code,'snapshots',len(item['snapshots']),flush=True)
+                    except Exception as ex:
+                        state['pending'][code]=str(ex)[:200]
+                        print('PENDING',code,str(ex)[:120],flush=True)
+                    save(cp,state)
+                    save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending']})
+                    time.sleep(max(0,args.delay))
+            finally:
+                context.close()
+    save(cp,state)
             save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending']})
             time.sleep(max(0,args.delay))
     save(cp,state)
