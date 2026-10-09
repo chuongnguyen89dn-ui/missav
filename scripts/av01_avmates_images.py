@@ -50,7 +50,7 @@ def extract(html,expected=None):
         if not u:return
         base=urlparse(u).path.rsplit('/',1)[-1].lower()
         # Match film code in image filename; excludes recommendations, ads and logos.
-        m=re.match(r'^([a-z]+)0*(\\d+)',base)
+        m=re.match(r'^([a-z]+)0*(\d+)',base)
         if not m or m.group(1)!=letters or int(m.group(2))!=number:return
         if u not in [i['url'] for i in imgs]:imgs.append({'url':u,'origin':origin})
     for meta in soup.select('meta[property="og:image"],meta[name="twitter:image"]'):
@@ -86,18 +86,30 @@ def extract(html,expected=None):
             'image_count':len(imgs),'status':'extracted_unverified' if poster else 'poster_missing'}
 
 def search_page(page,code):
-    # Search the visible website, not the blocked wp-json API.
-    page.goto('https://avmates.com/?s='+quote(code),wait_until='domcontentloaded',timeout=45000)
-    page.wait_for_timeout(1200)
-    if 'just a moment' in page.title().lower():
-        print('Browser verification requested; complete it in Chromium.',flush=True)
-        input('Press Enter after the page is accessible...')
-    candidates=page.locator('a[href*="avmates.com/"]').evaluate_all(
-        """els => els.map(a=>a.href).filter(Boolean)""")
-    for link in candidates:
-        parts=[p for p in urlparse(link).path.split('/') if p]
-        if any(normalize(p)==normalize(code) for p in parts):
-            return link
+    # Let the user finish any browser verification before interpreting search results.
+    target='https://avmates.com/?s='+quote(code)
+    page.goto(target,wait_until='domcontentloaded',timeout=45000)
+    def candidates():
+        page.wait_for_timeout(1800)
+        links=page.locator('a[href]').evaluate_all(
+            """els => els.map(a=>a.href).filter(Boolean)""")
+        for link in links:
+            parsed=urlparse(link)
+            if parsed.netloc.lower() not in ('avmates.com','www.avmates.com'):continue
+            parts=[p for p in parsed.path.split('/') if p]
+            if any(normalize(p)==normalize(code) for p in parts):return link
+        return ''
+    found=candidates()
+    if found:return found
+    print('WAIT',code,'Search result not confirmed. Check Chromium:',page.url,flush=True)
+    print('Finish verification or wait for results to load, then press Enter.',flush=True)
+    print('Type s + Enter to skip this movie; do not close Chromium.',flush=True)
+    for attempt in range(3):
+        choice=input('Chromium ready? [Enter=retry, s=skip]: ').strip().lower()
+        if choice=='s':return ''
+        found=candidates()
+        if found:return found
+        print('No exact result yet:',code,'attempt',attempt+1,flush=True)
     return ''
 
 def main():
