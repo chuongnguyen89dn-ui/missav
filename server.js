@@ -40,6 +40,12 @@ movies.sort((a,b)=>{
   if(bi!==undefined)return 1;
   return originalPosition.get(String(a.id))-originalPosition.get(String(b.id));
 });
+// Materialize verified portrait posters on the movie records once at startup.
+// The catalog/meta paths then read the same x.poster field as the Oct 8 addon.
+movies=movies.map(x=>{
+  const verified=imageById.get(String(x.id));
+  return verified?.poster?{...x,poster:verified.poster}:x;
+});
 const byId=new Map(movies.map(x=>['av01:'+String(x.id),x]));
 // Version verified image URLs so clients do not reuse previously cached thumbnails.
 const IMAGE_REV='avmates-20261009-2';
@@ -56,8 +62,6 @@ function freshVerifiedImage(url){
 function meta(x){
   const id='av01:'+x.id;
   const verified=imageById.get(String(x.id));
-  // Isolated YUJ-074 test: NEVER fall back to its previous DMM poster.
-  const isYuj074=String(x.id)==='221350';
   const code=x.dvd_id||x.code||'';
   const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
   const cast=(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
@@ -70,7 +74,7 @@ function meta(x){
   const name=x.title||x.catalog_title||x.code||code||('AV01 '+x.id);
   const m={
     id,type:'movie',name,
-    poster:isYuj074?freshVerifiedImage(verified?.poster):(verified?.poster?freshVerifiedImage(verified.poster):(x.poster||x.cover||undefined)),
+    poster:x.poster||x.cover||undefined,
     background:landscape?freshVerifiedImage(landscape):(images[0]||x.background||x.backdrop||undefined),
     description:x.description||undefined,
     website:x.page_url||undefined,
@@ -95,7 +99,7 @@ function meta(x){
 
 const manifest={
   id:'community.av01.filtered',
-  version:'1.0.2-yuj074-poster-test',
+  version:'1.0.3-merged-portrait-posters',
   name:'AV01',
   description:'AV01 Hottest verified scanner catalog with metadata enrichment',
   resources:['catalog','meta','stream'],
