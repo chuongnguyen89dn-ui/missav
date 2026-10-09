@@ -154,8 +154,5 @@ def main():
             finally:
                 context.close()
     save(cp,state)
-            save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending']})
-            time.sleep(max(0,args.delay))
-    save(cp,state)
     save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending']})
 if __name__=='__main__':main()
