@@ -30,35 +30,54 @@ let imageData={movies:[]};
 try{imageData=JSON.parse(readFileSync(new URL('./data/av01-avmates-cdn-images.json',import.meta.url),'utf8'));}catch{}
 const imageById=new Map((imageData.movies||[]).filter(x=>x?.status==='ok'&&x?.poster)
   .map(x=>[String(x.id),x]));
+// Show verified scanned films first, in scan result order; preserve original order for the rest.
+const originalPosition=new Map(movies.map((x,i)=>[String(x.id),i]));
+const scannedPosition=new Map((imageData.movies||[]).filter(x=>x?.status==='ok'&&x?.poster).map((x,i)=>[String(x.id),i]));
+movies.sort((a,b)=>{
+  const ai=scannedPosition.get(String(a.id)),bi=scannedPosition.get(String(b.id));
+  if(ai!==undefined&&bi!==undefined)return ai-bi;
+  if(ai!==undefined)return -1;
+  if(bi!==undefined)return 1;
+  return originalPosition.get(String(a.id))-originalPosition.get(String(b.id));
+});
 const byId=new Map(movies.map(x=>['av01:'+String(x.id),x]));
 
+// AV01 adaptation of XemXiec's baseMeta: primary Play entry, then image thumbnails.
 function meta(x){
+  const id='av01:'+x.id;
+  const verified=imageById.get(String(x.id));
+  const code=x.dvd_id||x.code||'';
   const genres=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
   const cast=(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
   const date=x.release_date||x.upload_date||'';
+  const dateString=String(date||'');
+  const released=/^\\d{4}-\\d{2}-\\d{2}/.test(dateString)?dateString.slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
+  // AVMates *ps.webp is the portrait poster. *pl_poster* is landscape cover, not a Snap.
+  const images=(verified?.snapshots||[]).filter(url=>typeof url==='string'&&!/pl_poster/i.test(url));
+  const landscape=(verified?.snapshots||[]).find(url=>/pl_poster/i.test(url));
+  const name=x.title||x.catalog_title||x.code||code||('AV01 '+x.id);
   const m={
-    id:'av01:'+x.id,type:'movie',
-    name:x.title||x.code||x.dvd_id||('AV01 '+x.id),
-    poster:imageById.get(String(x.id))?.poster||x.poster||x.cover||undefined,
-    background:imageById.get(String(x.id))?.snapshots?.[0]||x.background||x.backdrop||undefined,
-    posterShape:'poster',
+    id,type:'movie',name,
+    poster:verified?.poster||x.poster||x.cover||undefined,
+    background:landscape||images[0]||x.background||x.backdrop||undefined,
     description:x.description||undefined,
-    releaseInfo:date?String(date).slice(0,4):(x.year?String(x.year):undefined),
-    released:date?new Date(date).toISOString():undefined,
-    genres,genre:genres,cast:cast.length?cast:undefined,
+    website:x.page_url||undefined,
+    posterShape:'poster',
+    behaviorHints:{defaultVideoId:id},
+    releaseInfo:date?dateString.slice(0,10):(x.year?String(x.year):undefined),
+    released:date?released:undefined,
+    genres,cast:cast.length?cast:undefined,
     director:x.maker?.name?[x.maker.name]:undefined,
+    studio:x.maker?.name||undefined,
     language:'Tiếng Nhật'
   };
-  // Match the proven XemXiec/Nuvio pattern: snapshots as video thumbnails.
-  // These entries are image-only and must never resolve to a playback stream.
-  const images=imageById.get(String(x.id))?.snapshots||[];
-  if(images.length){
-    const released=/^\d{4}-\d{2}-\d{2}/.test(String(date))?String(date).slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
-    m.videos=images.map((thumbnail,i)=>({
-      id:'av01:'+x.id+':image:'+(i+1),title:'Snap '+(i+1),
-      released,season:1,episode:i+1,thumbnail,available:true
-    }));
-  }
+  const videos=[{id,title:name,released,available:true}];
+  images.forEach((thumbnail,i)=>videos.push({
+    id:id+':image:'+(i+1),title:'Snap '+(i+1),released,
+    season:1,episode:i+1,thumbnail,
+    overview:code+' • Snap '+(i+1),available:true
+  }));
+  m.videos=videos;
   return Object.fromEntries(Object.entries(m).filter(([,v])=>v!==undefined&&v!==''));
 }
 
