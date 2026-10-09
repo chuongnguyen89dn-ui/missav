@@ -7,9 +7,20 @@ from urllib.error import HTTPError,URLError
 ROOT=Path(__file__).resolve().parent.parent
 CODE=re.compile(r'(?<![A-Z0-9])([A-Z]{2,10})[-_ ]?(\d{2,6})(?![A-Z0-9])',re.I)
 def code_of(movie):
-    for k in ('code','dvd_id','title','name'):
+    """Prefer original studio code; exclude AV01 site branding and LADA release label."""
+    title=str(movie.get('title') or '')
+    description=str(movie.get('description') or '')
+    combined=title+' '+description
+    fc2=re.search(r'FC2[-_ ]?PPV[-_ ]?(\\d{5,9})',combined,re.I)
+    if fc2:return 'FC2-PPV-'+fc2.group(1)
+    for field in (title,description):
+        match=re.search(r'(?<![A-Z0-9])([A-Z]{2,10})[-_ ]?(\\d{2,6})(?![A-Z0-9])',field,re.I)
+        if match and match.group(1).upper() not in ('AV','LADA'):
+            return match.group(1).upper()+'-'+match.group(2)
+    for k in ('code','dvd_id','name'):
         m=CODE.search(str(movie.get(k) or ''))
-        if m:return m.group(1).upper()+'-'+m.group(2)
+        if m and m.group(1).upper() not in ('AV','LADA'):
+            return m.group(1).upper()+'-'+m.group(2)
     return None
 def save(path,obj):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -28,6 +39,10 @@ def verify(url,timeout):
     except (URLError,TimeoutError,OSError) as e:return False,type(e).__name__
 def scan(movie,max_snap,timeout,workers):
     code=code_of(movie)
+    if code and code.startswith('FC2-PPV-'):
+        return {'id':movie.get('id'),'code':code,'poster':None,'snapshots':[],
+                'snapshot_count':0,'source':'avmates_cdn','status':'skipped_fc2_amateur',
+                'complete_gallery_verified':False,'errors':[]},None
     if not code:return None,'missing_movie_code'
     m=CODE.search(code); letters=m.group(1).lower();number=int(m.group(2))
     stems=list(dict.fromkeys(letters+str(number).zfill(n) for n in (5,4,3)))
@@ -63,24 +78,28 @@ def main():
     raw=json.loads((ROOT/a.catalog).read_text(encoding='utf-8'))
     movies=raw if isinstance(raw,list) else raw.get('movies',[])
     cp,out=ROOT/a.checkpoint,ROOT/a.output
-    state={'completed':{},'pending':{}}
+    state={'completed':{},'pending':{},'skipped':{}}
     if cp.exists() and not a.reset:state=json.loads(cp.read_text(encoding='utf-8'))
+    state.setdefault('skipped',{})
     for movie in (movies[:a.limit] if a.limit else movies):
         code=code_of(movie);key=str(movie.get('id') or code or '')
-        if key in state['completed']:continue
+        if key in state['completed'] or key in state['skipped']:continue
         result,error=scan(movie,a.max_snap,a.timeout,a.workers)
         if error:
             state['pending'][key]=error
             print('PENDING',key,error,flush=True)
         else:
-            if result['status']=='ok':
+            if result['status']=='skipped_fc2_amateur':
+                state['skipped'][key]=result
+                state['pending'].pop(key,None)
+            elif result['status']=='ok':
                 state['completed'][key]=result
                 state['pending'].pop(key,None)
             else:state['pending'][key]=result
             print(result['status'].upper(),code,'poster=',bool(result['poster']),
                   'snapshots=',result['snapshot_count'],'errors=',result['errors'],flush=True)
         save(cp,state)
-        save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending']})
+        save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
         time.sleep(max(0,a.delay))
-    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']))
+    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
 if __name__=='__main__':main()
