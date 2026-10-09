@@ -77,3 +77,15 @@ python -m py_compile scripts\av01_avmates_cdn_scan.py
 python scripts\av01_avmates_cdn_scan.py --limit 20
 ```
 Đã hoàn tất 20 phim theo log trên. Để chạy toàn bộ (chỉ khi xác nhận lọc và phạm vi), dùng `--limit 0`; checkpoint giữ phim đã thành công. Chưa xác minh độ bao phủ tất cả ảnh và chưa upload JSON kết quả lên GitHub.
+
+
+## 09/10/2026 — AVMates full catalog-ID image scan on GitHub Actions
+- Code commit: b415c16d9ea5c28b6775031217dfd63fca546379.
+- Workflow commit: 0493b5ac5b231271584084c56d132e61fceb6b93.
+- Workflow: .github/workflows/av01-avmates-images.yml, manual workflow_dispatch and schedule minutes 17/47 hourly (UTC); first scheduled run has NOT been verified.
+- Reads current data/av01-catalog.json in original ID order, up to 20 new IDs per run, no catalog/manifest/player changes.
+- Excludes FC2-PPV, CAWB, HEYZO and numeric GANA families from image results; questionable other codes need review.
+- Resumable GitHub data: data/av01-avmates-cdn-images.json and av01_avmates_cdn/checkpoint.json; GitHub Actions commits results/checkpoint at end of each run, including failures when files exist.
+- Source: cdn.avmates.com, verified image response; poster ps.webp; snapshots pl_poster_800w_q70.webp and jp-N.webp, probing N up to 30, not proof of complete gallery.
+- WARNING: This is scan infrastructure deployed to GitHub, not proof a scan run has succeeded or produced images. Inspect Actions runs and committed output to confirm. Existing 20-film successful test was on user's Windows, not imported into GitHub.
+- For a genuinely fresh start, remove the image-only checkpoint and result files (if they appear) before running; do NOT remove main AV01 catalog. The current GitHub repo had no published image checkpoint at setup.
