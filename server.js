@@ -61,7 +61,7 @@ function meta(x){
   const cast=(x.actresses||[]).map(v=>typeof v==='string'?v:v?.name).filter(Boolean);
   const date=x.release_date||x.upload_date||'';
   const dateString=String(date||'');
-  const released=/^\\d{4}-\\d{2}-\\d{2}/.test(dateString)?dateString.slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
+  const released=/^\d{4}-\d{2}-\d{2}/.test(dateString)?dateString.slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
   // AVMates *ps.webp is the portrait poster. *pl_poster* is landscape cover, not a Snap.
   const images=(verified?.snapshots||[]).filter(url=>typeof url==='string'&&/jp-\d+\./i.test(url)).map(freshVerifiedImage);
   const landscape=(verified?.snapshots||[]).find(url=>/pl_poster/i.test(url));
