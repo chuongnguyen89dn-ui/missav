@@ -85,6 +85,8 @@ def main():
     p.add_argument('--timeout',type=float,default=12)
     p.add_argument('--delay',type=float,default=1)
     p.add_argument('--reset',action='store_true')
+    p.add_argument('--batch-size',type=int,default=0,help='Maximum new movie IDs per invocation; 0=all')
+    p.add_argument('--no-publish',action='store_true',help='Let GitHub Actions publish output instead')
     p.add_argument('--publish-every',type=int,default=25,help='Commit and push checkpoint/results every N processed movies; 0 disables')
     a=p.parse_args()
     if not 1<=a.max_snap<=100 or not 1<=a.workers<=8:p.error('max-snap 1..100, workers 1..8')
@@ -93,11 +95,23 @@ def main():
     cp,out=ROOT/a.checkpoint,ROOT/a.output
     state={'completed':{},'pending':{},'skipped':{}}
     if cp.exists() and not a.reset:state=json.loads(cp.read_text(encoding='utf-8'))
+    for field in ('completed','pending','skipped'):state.setdefault(field,{})
+    valid={str(m.get('id')) for m in movies}
+    for field in ('completed','pending','skipped'):
+        for key in list(state[field]):
+            if key not in valid:del state[field][key]
+    for movie in movies:
+        key=str(movie.get('id'))
+        if excluded(movie):
+            state['completed'].pop(key,None)
+            state['pending'].pop(key,None)
+            state['skipped'][key]={'id':movie.get('id'),'code':code_of(movie),'status':'skipped_excluded_code'}
     state.setdefault('skipped',{})
     processed=0
     for movie in (movies[:a.limit] if a.limit else movies):
         code=code_of(movie);key=str(movie.get('id') or code or '')
         if key in state['completed'] or key in state['skipped']:continue
+        if a.batch_size and processed>=a.batch_size:break
         if excluded(movie):
             state['skipped'][key]={'id':movie.get('id'),'code':code,'status':'skipped_excluded_code'}
             state['pending'].pop(key,None)
@@ -105,7 +119,7 @@ def main():
             save(cp,state)
             save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
             processed+=1
-            if a.publish_every and processed%a.publish_every==0:publish([cp,out])
+            if not a.no_publish and a.publish_every and processed%a.publish_every==0:publish([cp,out])
             continue
         result,error=scan(movie,a.max_snap,a.timeout,a.workers)
         if error:
@@ -126,6 +140,8 @@ def main():
         processed+=1
         if a.publish_every and processed%a.publish_every==0:publish([cp,out])
         time.sleep(max(0,a.delay))
-    if a.publish_every and processed:publish([cp,out])
-    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
+    save(cp,state)
+    save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
+    if not a.no_publish and a.publish_every and processed:publish([cp,out])
+    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']),'processed_this_run=',processed,'total_catalog=',len(movies),flush=True)
 if __name__=='__main__':main()
