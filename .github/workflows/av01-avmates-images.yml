@@ -1,0 +1,36 @@
+name: AV01 AVMates posters and snapshots by catalog ID
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+concurrency:
+  group: av01-avmates-images
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check scanner syntax
+        run: python -m py_compile scripts/av01_avmates_cdn_scan.py
+      - name: Scan next 20 catalog IDs and persist independent output
+        run: python scripts/av01_avmates_cdn_scan.py --limit 0 --batch-size 20 --max-snap 30 --workers 4 --delay 1 --no-publish
+      - name: Publish every result and checkpoint to GitHub
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/av01-avmates-cdn-images.json av01_avmates_cdn/checkpoint.json
+          if ! git diff --cached --quiet; then
+            git commit -m "data(av01): AVMates verified posters and snapshots checkpoint"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
