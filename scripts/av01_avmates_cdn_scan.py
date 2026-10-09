@@ -22,12 +22,12 @@ def code_of(movie):
         if m and m.group(1).upper() not in ('AV','LADA'):
             return m.group(1).upper()+'-'+m.group(2)
     return None
-BLOCKED=re.compile(r'FC2[-_ ]?PPV|(?:^|[^A-Z0-9])(?:HEYZO|CAWB)[-_ ]?\\d+|(?:^|[^A-Z0-9])\\d{2,4}GANA[-_ ]?\\d+',re.I)
+BLOCKED=re.compile(r'FC2[-_ ]?PPV|(?:^|[^A-Z0-9])(?:HEYZO|CAWB)[-_ ]?\d+|(?:^|[^A-Z0-9])\d{2,4}GANA[-_ ]?\d+',re.I)
 def excluded(movie):
     fields=('title','description','code','dvd_id','name')
     return any(BLOCKED.search(str(movie.get(k) or '')) for k in fields)
 def publish(paths):
-    rel=[str(p.relative_to(ROOT)).replace('\\\\','/') for p in paths]
+    rel=[str(p.relative_to(ROOT)).replace(chr(92),'/') for p in paths]
     subprocess.run(['git','add','--',*rel],cwd=ROOT,check=True)
     changed=subprocess.run(['git','diff','--cached','--quiet'],cwd=ROOT).returncode
     if changed==1:
@@ -127,5 +127,5 @@ def main():
         if a.publish_every and processed%a.publish_every==0:publish([cp,out])
         time.sleep(max(0,a.delay))
     if a.publish_every and processed:publish([cp,out])
-    print('DONE verified=,len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
+    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
 if __name__=='__main__':main()
