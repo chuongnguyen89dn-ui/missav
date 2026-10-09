@@ -12,6 +12,16 @@ const filteredById=new Map(filteredMovies.map(x=>[String(x.id),x]));
 let verifiedImages={movies:[]};
 try{verifiedImages=JSON.parse(readFileSync(new URL('./data/av01-avmates-cdn-images.json',import.meta.url),'utf8'));}catch{}
 const verifiedById=new Map((verifiedImages.movies||[]).filter(x=>x?.status==='ok'&&x?.poster).map(x=>[String(x.id),x]));
+const scannedOrder=new Map((verifiedImages.movies||[]).filter(x=>x?.status==='ok'&&x?.poster).map((x,i)=>[String(x.id),i]));
+const catalogPosition=new Map(filteredMovies.map((x,i)=>[String(x.id),i]));
+const publishedMovies=[...filteredMovies].sort((a,b)=>{
+  const ai=scannedOrder.get(String(a.id)),bi=scannedOrder.get(String(b.id));
+  if(ai!==undefined&&bi!==undefined)return ai-bi;
+  if(ai!==undefined)return -1;
+  if(bi!==undefined)return 1;
+  return catalogPosition.get(String(a.id))-catalogPosition.get(String(b.id));
+});
+
 function verifiedMeta(x){
   const base=filteredMeta(x);
   const verified=verifiedById.get(String(x.id));
@@ -339,7 +349,7 @@ http.createServer = function(handler, ...rest) {
         });
       }
       if (path === '/catalog/movie/av01-test.json') return send(res, { metas: (await items()).map(meta) });
-      if (path === '/catalog/movie/av01-filtered.json') return send(res, { metas: filteredMovies.map(x=>{const m=verifiedMeta(x);delete m.videos;return m;}) });
+      if (path === '/catalog/movie/av01-filtered.json') return send(res, { metas: publishedMovies.map(x=>{const m=verifiedMeta(x);delete m.videos;return m;}) });
 
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
