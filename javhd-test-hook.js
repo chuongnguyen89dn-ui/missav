@@ -9,6 +9,19 @@ let enrichedCatalog={movies:[]};
 try{enrichedCatalog=JSON.parse(readFileSync(new URL('./data/av01-metadata-enriched.json',import.meta.url),'utf8'));}catch{}
 const enrichedById=new Map((enrichedCatalog.movies||[]).map(x=>[String(x.id),x]));
 const filteredById=new Map(filteredMovies.map(x=>[String(x.id),x]));
+let verifiedImages={movies:[]};
+try{verifiedImages=JSON.parse(readFileSync(new URL('./data/av01-avmates-cdn-images.json',import.meta.url),'utf8'));}catch{}
+const verifiedById=new Map((verifiedImages.movies||[]).filter(x=>x?.status==='ok'&&x?.poster).map(x=>[String(x.id),x]));
+function verifiedMeta(x){
+  const base=filteredMeta(x);
+  const verified=verifiedById.get(String(x.id));
+  if(!verified)return base;
+  const snaps=(verified.snapshots||[]).filter(u=>typeof u==='string'&&/jp-\d+\./i.test(u));
+  const videos=[{id:base.id,title:base.name,available:true}];
+  snaps.forEach((thumbnail,i)=>videos.push({id:base.id+':image:'+(i+1),title:'Snap '+(i+1),season:1,episode:i+1,thumbnail,available:true}));
+  return {...base,poster:verified.poster,background:(verified.snapshots||[]).find(u=>/pl_poster/i.test(u))||base.background,behaviorHints:{defaultVideoId:base.id},videos};
+}
+
 function filteredMeta(x){
   const tags=(x.official_tags||x.tags||[]).map(v=>typeof v==='string'?v:(v?.name||v?.title||'')).filter(Boolean);
   return Object.fromEntries(Object.entries({id:`av01:${x.id}`,type:'movie',name:x.title||x.code||`AV01 ${x.id}`,poster:(enrichedById.get(String(x.id))?.poster||`https://av01-production-wzre.onrender.com/av01/${x.id}/poster.jpg`),background:(enrichedById.get(String(x.id))?.poster||`https://av01-production-wzre.onrender.com/av01/${x.id}/poster.jpg`),posterShape:'poster',description:x.description||undefined,releaseInfo:x.year?String(x.year):undefined,genres:tags,genre:tags,language:'Tiếng Nhật'}).filter(([,v])=>v!==undefined&&v!==''));
@@ -326,7 +339,7 @@ http.createServer = function(handler, ...rest) {
         });
       }
       if (path === '/catalog/movie/av01-test.json') return send(res, { metas: (await items()).map(meta) });
-      if (path === '/catalog/movie/av01-filtered.json') return send(res, { metas: filteredMovies.map(filteredMeta) });
+      if (path === '/catalog/movie/av01-filtered.json') return send(res, { metas: filteredMovies.map(x=>{const m=verifiedMeta(x);delete m.videos;return m;}) });
 
       let m = path.match(/^\/stream\/movie\/av01:(\d+)\.json$/);
       if (m) {
@@ -369,7 +382,7 @@ http.createServer = function(handler, ...rest) {
       m = path.match(/^\/meta\/movie\/av01:(\d+)\.json$/);
       if (m) {
         const fx = filteredById.get(m[1]);
-        if (fx) return send(res, { meta: filteredMeta(fx) });
+        if (fx) return send(res, { meta: verifiedMeta(fx) });
         const x = (await items()).find(v => String(v.id) === m[1]);
         return x ? send(res, { meta: meta(x) }) : send(res, { error: 'Not found' }, 404);
       }
