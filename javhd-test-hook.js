@@ -16,7 +16,7 @@ function verifiedMeta(x){
   const base=filteredMeta(x);
   const verified=verifiedById.get(String(x.id));
   if(!verified)return base;
-  const snaps=(verified.snapshots||[]).filter(u=>typeof u==='string'&&/jp-\\d+\\./i.test(u));
+  const snaps=(verified.snapshots||[]).filter(u=>typeof u==='string'&&/jp-\d+\./i.test(u));
   const videos=[{id:base.id,title:base.name,available:true}];
   snaps.forEach((thumbnail,i)=>videos.push({id:base.id+':image:'+(i+1),title:'Snap '+(i+1),season:1,episode:i+1,thumbnail,available:true}));
   return {...base,poster:verified.poster,background:(verified.snapshots||[]).find(u=>/pl_poster/i.test(u))||base.background,behaviorHints:{defaultVideoId:base.id},videos};
