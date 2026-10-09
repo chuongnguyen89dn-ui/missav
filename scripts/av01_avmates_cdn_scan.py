@@ -11,10 +11,10 @@ def code_of(movie):
     title=str(movie.get('title') or '')
     description=str(movie.get('description') or '')
     combined=title+' '+description
-    fc2=re.search(r'FC2[-_ ]?PPV[-_ ]?(\\d{5,9})',combined,re.I)
+    fc2=re.search(r'FC2[-_ ]?PPV[-_ ]?(\d{5,9})',combined,re.I)
     if fc2:return 'FC2-PPV-'+fc2.group(1)
     for field in (title,description):
-        match=re.search(r'(?<![A-Z0-9])([A-Z]{2,10})[-_ ]?(\\d{2,6})(?![A-Z0-9])',field,re.I)
+        match=re.search(r'(?<![A-Z0-9])([A-Z]{2,10})[-_ ]?(\d{2,6})(?![A-Z0-9])',field,re.I)
         if match and match.group(1).upper() not in ('AV','LADA'):
             return match.group(1).upper()+'-'+match.group(2)
     for k in ('code','dvd_id','name'):
