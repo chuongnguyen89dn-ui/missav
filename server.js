@@ -25,6 +25,11 @@ movies=movies.map(item=>{
   return merged;
 });
 
+// Independent verified AVMates image layer, keyed by the original AV01 catalog ID.
+let imageData={movies:[]};
+try{imageData=JSON.parse(readFileSync(new URL('./data/av01-avmates-cdn-images.json',import.meta.url),'utf8'));}catch{}
+const imageById=new Map((imageData.movies||[]).filter(x=>x?.status==='ok'&&x?.poster)
+  .map(x=>[String(x.id),x]));
 const byId=new Map(movies.map(x=>['av01:'+String(x.id),x]));
 
 function meta(x){
@@ -34,7 +39,9 @@ function meta(x){
   const m={
     id:'av01:'+x.id,type:'movie',
     name:x.title||x.code||x.dvd_id||('AV01 '+x.id),
-    poster:x.poster||x.cover||undefined,posterShape:'poster',
+    poster:imageById.get(String(x.id))?.poster||x.poster||x.cover||undefined,
+    background:imageById.get(String(x.id))?.snapshots?.[0]||x.background||x.backdrop||undefined,
+    posterShape:'poster',
     description:x.description||undefined,
     releaseInfo:date?String(date).slice(0,4):(x.year?String(x.year):undefined),
     released:date?new Date(date).toISOString():undefined,
@@ -42,6 +49,16 @@ function meta(x){
     director:x.maker?.name?[x.maker.name]:undefined,
     language:'Tiếng Nhật'
   };
+  // Match the proven XemXiec/Nuvio pattern: snapshots as video thumbnails.
+  // These entries are image-only and must never resolve to a playback stream.
+  const images=imageById.get(String(x.id))?.snapshots||[];
+  if(images.length){
+    const released=/^\\d{4}-\\d{2}-\\d{2}/.test(String(date))?String(date).slice(0,10)+'T00:00:00.000Z':'2026-01-01T00:00:00.000Z';
+    m.videos=images.map((thumbnail,i)=>({
+      id:'av01:'+x.id+':image:'+(i+1),title:'Snap '+(i+1),
+      released,season:1,episode:i+1,thumbnail,available:true
+    }));
+  }
   return Object.fromEntries(Object.entries(m).filter(([,v])=>v!==undefined&&v!==''));
 }
 
@@ -78,7 +95,9 @@ http.createServer(async(req,res)=>{
     return x?json(res,{meta:meta(x)}):json(res,{error:'Not found'},404);
   }
   if(path.startsWith('/stream/movie/av01:')&&path.endsWith('.json')){
-    const x=byId.get(path.slice('/stream/movie/'.length,-5));
+    const requested=path.slice('/stream/movie/'.length,-5);
+    if(/:image:\\d+$/.test(requested))return json(res,{streams:[]});
+    const x=byId.get(requested);
     return x?json(res,{streams:[{name:'AV01 1080p',title:'AV01 source',externalUrl:x.page_url||('https://www.av01.media/en/video/'+x.id)}]}):json(res,{streams:[]});
   }
   return json(res,{error:'Not found'},404);
