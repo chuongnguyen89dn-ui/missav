@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Probe AVMates CDN for AV01 portrait posters and candidate snapshots. Isolated output."""
-import argparse,concurrent.futures,json,os,re,time
+import argparse,concurrent.futures,json,os,re,time,subprocess
 from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
@@ -22,6 +22,18 @@ def code_of(movie):
         if m and m.group(1).upper() not in ('AV','LADA'):
             return m.group(1).upper()+'-'+m.group(2)
     return None
+BLOCKED=re.compile(r'FC2[-_ ]?PPV|(?:^|[^A-Z0-9])(?:HEYZO|CAWB)[-_ ]?\\d+|(?:^|[^A-Z0-9])\\d{2,4}GANA[-_ ]?\\d+',re.I)
+def excluded(movie):
+    fields=('title','description','code','dvd_id','name')
+    return any(BLOCKED.search(str(movie.get(k) or '')) for k in fields)
+def publish(paths):
+    rel=[str(p.relative_to(ROOT)).replace('\\\\','/') for p in paths]
+    subprocess.run(['git','add','--',*rel],cwd=ROOT,check=True)
+    changed=subprocess.run(['git','diff','--cached','--quiet'],cwd=ROOT).returncode
+    if changed==1:
+        subprocess.run(['git','commit','-m','data(av01): checkpoint poster and snapshot scan'],cwd=ROOT,check=True)
+        subprocess.run(['git','push','origin','HEAD:main'],cwd=ROOT,check=True)
+    elif changed!=0:raise RuntimeError('git diff failed')
 def save(path,obj):
     path.parent.mkdir(parents=True,exist_ok=True)
     tmp=path.with_suffix(path.suffix+'.tmp')
@@ -39,9 +51,9 @@ def verify(url,timeout):
     except (URLError,TimeoutError,OSError) as e:return False,type(e).__name__
 def scan(movie,max_snap,timeout,workers):
     code=code_of(movie)
-    if code and code.startswith('FC2-PPV-'):
+    if excluded(movie):
         return {'id':movie.get('id'),'code':code,'poster':None,'snapshots':[],
-                'snapshot_count':0,'source':'avmates_cdn','status':'skipped_fc2_amateur',
+                'snapshot_count':0,'source':'avmates_cdn','status':'skipped_excluded_code',
                 'complete_gallery_verified':False,'errors':[]},None
     if not code:return None,'missing_movie_code'
     m=CODE.search(code); letters=m.group(1).lower();number=int(m.group(2))
@@ -73,6 +85,7 @@ def main():
     p.add_argument('--timeout',type=float,default=12)
     p.add_argument('--delay',type=float,default=1)
     p.add_argument('--reset',action='store_true')
+    p.add_argument('--publish-every',type=int,default=25,help='Commit and push checkpoint/results every N processed movies; 0 disables')
     a=p.parse_args()
     if not 1<=a.max_snap<=100 or not 1<=a.workers<=8:p.error('max-snap 1..100, workers 1..8')
     raw=json.loads((ROOT/a.catalog).read_text(encoding='utf-8'))
@@ -81,15 +94,25 @@ def main():
     state={'completed':{},'pending':{},'skipped':{}}
     if cp.exists() and not a.reset:state=json.loads(cp.read_text(encoding='utf-8'))
     state.setdefault('skipped',{})
+    processed=0
     for movie in (movies[:a.limit] if a.limit else movies):
         code=code_of(movie);key=str(movie.get('id') or code or '')
         if key in state['completed'] or key in state['skipped']:continue
+        if excluded(movie):
+            state['skipped'][key]={'id':movie.get('id'),'code':code,'status':'skipped_excluded_code'}
+            state['pending'].pop(key,None)
+            print('SKIPPED_EXCLUDED',key,code,flush=True)
+            save(cp,state)
+            save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
+            processed+=1
+            if a.publish_every and processed%a.publish_every==0:publish([cp,out])
+            continue
         result,error=scan(movie,a.max_snap,a.timeout,a.workers)
         if error:
             state['pending'][key]=error
             print('PENDING',key,error,flush=True)
         else:
-            if result['status']=='skipped_fc2_amateur':
+            if result['status']=='skipped_excluded_code':
                 state['skipped'][key]=result
                 state['pending'].pop(key,None)
             elif result['status']=='ok':
@@ -100,6 +123,9 @@ def main():
                   'snapshots=',result['snapshot_count'],'errors=',result['errors'],flush=True)
         save(cp,state)
         save(out,{'count':len(state['completed']),'movies':list(state['completed'].values()),'pending':state['pending'],'skipped':state['skipped']})
+        processed+=1
+        if a.publish_every and processed%a.publish_every==0:publish([cp,out])
         time.sleep(max(0,a.delay))
-    print('DONE verified=',len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
+    if a.publish_every and processed:publish([cp,out])
+    print('DONE verified=,len(state['completed']),'pending=',len(state['pending']),'skipped=',len(state['skipped']))
 if __name__=='__main__':main()
